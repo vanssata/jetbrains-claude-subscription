@@ -36,8 +36,9 @@ object NodeRuntimeResolver {
         val path = System.getenv("PATH") ?: return null
         return path.splitToSequence(File.pathSeparatorChar)
             .filter { it.isNotBlank() }
-            .map { Paths.get(it) }
-            .mapNotNull { runCatching { runtimeAt(it) }.getOrNull() }
+            // Inside runCatching: on Windows a PATH entry with quotes or other illegal
+            // characters makes Paths.get throw, and one bad entry must not hide node.
+            .mapNotNull { runCatching { runtimeAt(Paths.get(it.trim().removeSurrounding("\""))) }.getOrNull() }
             .firstOrNull()
     }
 
@@ -49,27 +50,54 @@ object NodeRuntimeResolver {
             .flatMap { it.childDirectories() }
             .sortedWith(compareBy(VERSION_ORDER) { it.name })
             .reversed()
-            .firstNotNullOfOrNull { runCatching { runtimeAt(it.resolve("bin")) }.getOrNull() }
+            .firstNotNullOfOrNull { dir ->
+                // The official Windows distribution has no bin/ directory, so the
+                // version directory itself is tried as well.
+                runCatching { runtimeAt(dir.resolve("bin")) ?: runtimeAt(dir) }.getOrNull()
+            }
 
-    /** Both locations are checked because the IDE cache moves on macOS. */
+    /**
+     * Both POSIX locations are checked because the IDE cache moves on macOS; Windows
+     * keeps it under `%LOCALAPPDATA%\JetBrains`.
+     */
     private fun ideCacheRoots(): List<Path> {
         val home = Paths.get(System.getProperty("user.home"))
+        val localAppData = System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }?.let { Paths.get(it) }
+            ?: home.resolve("AppData/Local")
         return listOf(
             home.resolve(".cache/JetBrains"),
             home.resolve("Library/Caches/JetBrains"),
+            localAppData.resolve("JetBrains"),
         ).filter { it.isDirectory() }
     }
 
-    /** Returns a runtime rooted at [binDir], or null when it is not a usable node install. */
+    /**
+     * Returns a runtime rooted at [binDir], or null when it is not a usable node install.
+     *
+     * Two layouts exist. POSIX tarballs put `bin/node` next to `lib/node_modules/npm`.
+     * The Windows distribution (and nvm-windows / nvm4w, whose `nodejs` directory is a
+     * link to one) is flat: `node.exe` and `node_modules\npm` share one directory.
+     * Checking only the POSIX layout is what made Windows report "No Node.js runtime
+     * found" with node plainly on PATH (issue #1).
+     */
     private fun runtimeAt(binDir: Path): NodeRuntime? {
-        val node = binDir.resolve("node")
+        // Only `node.exe` on Windows: there isExecutable is true for any readable file,
+        // so an extensionless `node` shell stub (Git Bash, npm shims) would be picked.
+        val node = binDir.resolve(if (IS_WINDOWS) "node.exe" else "node")
         if (!node.isRegularFile() || !node.isExecutable()) return null
 
-        val npxCli = binDir.parent?.resolve("lib/node_modules/npm/bin/npx-cli.js") ?: return null
-        if (!npxCli.isRegularFile()) return null
+        val npxCli = listOfNotNull(
+            binDir.parent?.resolve("lib/node_modules/npm/bin/npx-cli.js"),
+            binDir.resolve("node_modules/npm/bin/npx-cli.js").takeIf { IS_WINDOWS },
+        ).firstOrNull { it.isRegularFile() } ?: return null
 
+        // Debian's `share/nodejs/npm` layout is deliberately not accepted: those packages
+        // ship node 18, the ACP package needs >= 22, and npx only warns about it — so
+        // matching it would shadow the IDE's newer runtime and crash the agent.
         return NodeRuntime(binDir = binDir, node = node, npxCli = npxCli)
     }
+
+    private val IS_WINDOWS = System.getProperty("os.name").orEmpty().startsWith("Windows")
 
     private fun Path.childDirectories(): List<Path> =
         runCatching { listDirectoryEntries().filter { it.isDirectory() } }.getOrElse { emptyList() }
