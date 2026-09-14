@@ -144,8 +144,10 @@ agent appears.
 
   If the extension point breaks outright, the agent itself keeps working; only the icon
   is lost.
-- **POSIX only.** Node resolution assumes POSIX paths and Linux/macOS IDE cache
-  locations. Windows is untested.
+- **Windows is lightly tested.** Node resolution understands the flat Windows layout
+  (`node.exe` next to `node_modules\npm`, as installed by the official installer and
+  nvm-windows) and looks for IDE runtimes under `%LOCALAPPDATA%\JetBrains`, but it is
+  developed and verified on Linux.
 - **Unsupported by JetBrains.** They disabled this deliberately in their bundled entry.
   An IDE update can change the behaviour this relies on.
 - A harmless `AcpModeManager - Agent ... has no registered modes` warning appears in the
