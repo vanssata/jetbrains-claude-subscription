@@ -27,6 +27,9 @@
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="dev.vanssa.claudeacp.ClaudeAgentProvisioner"/>
         <notificationGroup id="Claude Subscription ACP" displayType="BALLOON"/>
+        <applicationConfigurable parentId="tools" id="dev.vanssa.claudeacp.settings"
+                                 displayName="Claude Subscription"
+                                 instance="dev.vanssa.claudeacp.ClaudeAcpConfigurable"/>
     </extensions>
 
     <!-- Internal AI Assistant extension point; see ClaudeAgentIconService for why
