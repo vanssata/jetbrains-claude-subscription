@@ -9,13 +9,17 @@
 -->
 <plugins>
     <plugin id="dev.vanssa.claudeacp"
-            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.2.0/jetbrains-claude-subscription-0.2.0.zip"
-            version="0.2.0">
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.2.1/jetbrains-claude-subscription-0.2.1.zip"
+            version="0.2.1">
         <idea-version since-build="262" until-build="262.*"/>
         <name>Claude Subscription ACP Agent</name>
         <vendor>vanssa</vendor>
         <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
         <change-notes><![CDATA[
+            <b>0.2.1</b><br/>
+            Node.js is now found on Windows: <code>node.exe</code> with the flat
+            <code>node_modules\npm</code> layout (official installer, nvm-windows), and IDE
+            runtimes under <code>%LOCALAPPDATA%\JetBrains</code>.<br/><br/>
             <b>0.2.0</b><br/>
             New optional <code>model</code> setting: the starting model for the IDE session,
             passed to the agent as <code>ANTHROPIC_MODEL</code>, so the IDE can start on a
