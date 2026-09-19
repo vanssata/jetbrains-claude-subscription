@@ -125,7 +125,11 @@ what to install — not a silent failure.
 
 ## Settings
 
-State lives in `claude-subscription-acp.xml`:
+Edit them under `Settings → Tools → Claude Subscription`. Applying rewrites the agent entry
+immediately; the IDE watches `acp.json`, so no restart is needed. The model is a dropdown
+(`opus`, `opus[1m]`, `sonnet`, `haiku`, `fable[1m]`) that also accepts any typed model id.
+Renaming the agent removes the entry under the old name. State is stored in
+`claude-subscription-acp.xml`:
 
 | Key | Default | Meaning |
 | --- | --- | --- |

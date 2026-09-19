@@ -26,7 +26,14 @@ class ClaudeAgentProvisioner : ProjectActivity {
 
     override suspend fun execute(project: Project) {
         if (!provisionedThisSession.compareAndSet(false, true)) return
+        provision()
+    }
 
+    /**
+     * Writes the entry for the current settings. Also called by the settings page on
+     * apply: the IDE watches `acp.json`, so a change takes effect without a restart.
+     */
+    fun provision() {
         val settings = ClaudeAcpSettings.getInstance()
         if (!settings.state.manageAgent) {
             LOG.info("Agent management disabled in settings; leaving ${AcpConfigFile.path} alone")
