@@ -26,10 +26,20 @@ class ClaudeAcpSettings : SimplePersistentStateComponent<ClaudeAcpSettings.State
          * package, so an unattended major bump could change behaviour silently.
          */
         var packageSpec: String? by string(DEFAULT_PACKAGE_SPEC)
+
+        /**
+         * Main-session model for the IDE agent, passed as `ANTHROPIC_MODEL`. Blank means
+         * no override: the package then takes `model` from `~/.claude/settings.json`, which
+         * is shared with the CLI and may hold a choice meant for the terminal only (e.g.
+         * a 1M-context variant). The env var only moves the main thread — subagents keep
+         * the `model:` from their own definitions, and those without one inherit this.
+         */
+        var model: String? by string("")
     }
 
     val displayName: String get() = state.displayName ?: DEFAULT_DISPLAY_NAME
     val packageSpec: String get() = state.packageSpec ?: DEFAULT_PACKAGE_SPEC
+    val model: String? get() = state.model?.trim()?.takeIf { it.isNotEmpty() }
 
     companion object {
         const val DEFAULT_DISPLAY_NAME: String = "Claude Subscription"

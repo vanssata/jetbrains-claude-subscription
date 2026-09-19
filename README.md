@@ -50,17 +50,28 @@ bundled entry.
 
 ## Install
 
-**[⬇ Download jetbrains-claude-subscription-0.1.0.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.1.0/jetbrains-claude-subscription-0.1.0.zip)**
+**[⬇ Download jetbrains-claude-subscription-0.2.0.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.2.0/jetbrains-claude-subscription-0.2.0.zip)**
 — or pick the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
 
 Then in the IDE: `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
 (do not unzip it), and restart.
 
+### Update notifications
+
+A plugin installed from disk is never checked for updates. To be notified in the IDE,
+add this repository once under `Settings → Plugins → ⚙ → Manage Plugin Repositories…`:
+
+```text
+https://raw.githubusercontent.com/vanssata/jetbrains-claude-subscription/master/updatePlugins.xml
+```
+
+The IDE then offers each new release like a Marketplace update.
+
 ### Building from source instead
 
 ```bash
 JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
-# build/distributions/jetbrains-claude-subscription-0.1.0.zip
+# build/distributions/jetbrains-claude-subscription-0.2.0.zip
 ```
 
 `gradle.properties` sets `platformLocalPath` and `aiAssistantPluginPath` to a locally
@@ -121,8 +132,13 @@ State lives in `claude-subscription-acp.xml`:
 | `manageAgent` | `true` | Turn off to stop the plugin touching `acp.json` and manage the entry yourself. |
 | `displayName` | `Claude Subscription` | Also determines the agent id the IDE derives, and therefore icon matching. |
 | `packageSpec` | `@agentclientprotocol/claude-agent-acp@0.62.0` | Pinned deliberately — the guard being worked around lives in this package. |
+| `model` | *(blank)* | Starting model for the IDE session, written to the agent's `env` as `ANTHROPIC_MODEL` (e.g. `opus`). Blank means the `model` from `~/.claude/settings.json`. |
 
-Model, effort and permission mode are **not** managed here. They are ACP session config
+`model` exists because `~/.claude/settings.json` is shared with the CLI. Use it when the IDE
+should start on a different model than the terminal does. It only sets the main session.
+Subagents still use the `model:` in their own definitions, and a subagent without one
+inherits the session model. A model you pick in the chat panel still overrides it for that
+session. Effort and permission mode are **not** managed here. They are ACP session config
 options that the IDE stores per agent id, so pick them once in the chat panel after the
 agent appears.
 
