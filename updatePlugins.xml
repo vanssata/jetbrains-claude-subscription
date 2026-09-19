@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Custom plugin repository. An install from disk is never checked for updates; the IDE
+  only polls repositories. Adding this file's raw URL under
+  Settings → Plugins → ⚙ → Manage Plugin Repositories… makes the IDE offer each new
+  version. `version` and `url` must match the `version` in build.gradle.kts and a release
+  asset that already exists — the IDE downloads from `url` as soon as it sees a newer
+  version, so this changes on master only after the release is published.
+-->
+<plugins>
+    <plugin id="dev.vanssa.claudeacp"
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.2.0/jetbrains-claude-subscription-0.2.0.zip"
+            version="0.2.0">
+        <idea-version since-build="262" until-build="262.*"/>
+        <name>Claude Subscription ACP Agent</name>
+        <vendor>vanssa</vendor>
+        <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
+        <change-notes><![CDATA[
+            <b>0.2.0</b><br/>
+            New optional <code>model</code> setting: the starting model for the IDE session,
+            passed to the agent as <code>ANTHROPIC_MODEL</code>, so the IDE can start on a
+            different model than <code>~/.claude/settings.json</code> gives the CLI.
+            Subagents keep their own <code>model:</code>.
+        ]]></change-notes>
+    </plugin>
+</plugins>

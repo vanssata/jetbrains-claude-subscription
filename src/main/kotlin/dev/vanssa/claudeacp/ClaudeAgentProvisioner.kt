@@ -45,7 +45,8 @@ class ClaudeAgentProvisioner : ProjectActivity {
             return
         }
 
-        when (val outcome = AcpConfigFile.upsertAgent(settings.displayName, buildEntry(runtime, settings.packageSpec))) {
+        val entry = buildEntry(runtime, settings.packageSpec, settings.model)
+        when (val outcome = AcpConfigFile.upsertAgent(settings.displayName, entry)) {
             AcpConfigFile.Outcome.UNCHANGED ->
                 LOG.info("Claude ACP agent already up to date in ${AcpConfigFile.path}")
 
@@ -75,7 +76,7 @@ class ClaudeAgentProvisioner : ProjectActivity {
      * Note what is *absent*: `--hide-claude-auth`. Everything else mirrors how the IDE
      * launches the bundled agent.
      */
-    private fun buildEntry(runtime: NodeRuntime, packageSpec: String): JsonObject {
+    private fun buildEntry(runtime: NodeRuntime, packageSpec: String, model: String?): JsonObject {
         val args = JsonArray().apply {
             add(runtime.npxCli.toString())
             add("-y")
@@ -91,6 +92,9 @@ class ClaudeAgentProvisioner : ProjectActivity {
                 if (inheritedPath.isEmpty()) runtime.binDir.toString()
                 else runtime.binDir.toString() + File.pathSeparator + inheritedPath,
             )
+            // The package ranks `ANTHROPIC_MODEL` above `settings.json`'s `model`, so
+            // this is the one knob that changes the IDE session without touching the CLI.
+            if (model != null) addProperty("ANTHROPIC_MODEL", model)
         }
 
         return JsonObject().apply {

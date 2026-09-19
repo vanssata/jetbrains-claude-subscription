@@ -42,6 +42,10 @@ exists for still works. Run it after any change to the package spec or node reso
 - **The pinned ACP package version lives in four places** and they must not drift:
   `ClaudeAcpSettings.DEFAULT_PACKAGE_SPEC`, `test/handshake.sh`, and two spots in `README.md`.
   Use `/bump-acp` rather than editing by hand.
+- **A release bumps the version in two places**: `version` in `build.gradle.kts` and
+  `updatePlugins.xml` (`version` and the asset `url`), plus the download link in `README.md`.
+  The IDE polls `updatePlugins.xml` on `master` and downloads from its `url` at once, so it
+  must reach `master` no earlier than the release asset it points to exists.
 - **The `262.*` build range is deliberate.** `AgentIconService` is internal AI Assistant API,
   not a published contract. Do not widen `untilBuild` to gain forward compatibility that has
   not been tested.
