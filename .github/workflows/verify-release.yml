@@ -1,0 +1,220 @@
+# Runs the IntelliJ Plugin Verifier against every IDE we claim to support, on each release.
+#
+# Two jobs. `marketplace` schedules runs on the Marketplace version page, which on its own
+# verifies only against IntelliJ IDEA. `verify` runs the same verifier CLI here and does not
+# depend on Marketplace's unpublished endpoints. It verifies the zip attached to the GitHub release — the exact artifact
+# that gets uploaded — rather than rebuilding: the Gradle build resolves the platform from
+# local installs (`platformLocalPath`) that do not exist on a runner.
+#
+# No Community editions: from 2026.2 IntelliJ IDEA and PyCharm ship as one unified
+# distribution, and data.services.jetbrains.com has no IIC/PCC release on that branch.
+name: Verify release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag whose zip to verify (e.g. v0.3.0)
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  # Same branch as `untilBuild` in build.gradle.kts; bump together.
+  IDE_MAJOR: "2026.2"
+  PLATFORM_BRANCH: "262"
+  VERIFIER_VERSION: "1.410"
+
+jobs:
+  verify:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      # One IDE per job: each unpacked IDE plus the downloaded AI Assistant dependency is
+      # several GB, too much to hold all of them on one runner's disk.
+      fail-fast: false
+      matrix:
+        include:
+          - { code: IIU, name: IntelliJ IDEA }
+          - { code: PCP, name: PyCharm }
+          - { code: WS, name: WebStorm }
+          - { code: PS, name: PhpStorm }
+          - { code: RM, name: RubyMine }
+          - { code: RR, name: RustRover }
+          - { code: GO, name: GoLand }
+          - { code: CL, name: CLion }
+          - { code: AI, name: Android Studio }
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download the release zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          mkdir plugin
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.zip' --dir plugin
+          ls -l plugin
+
+      - name: Resolve the latest ${{ env.IDE_MAJOR }} build
+        id: ide
+        env:
+          CODE: ${{ matrix.code }}
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os, urllib.request
+
+          code, major, branch = os.environ["CODE"], os.environ["IDE_MAJOR"], os.environ["PLATFORM_BRANCH"]
+
+          def get(url):
+              with urllib.request.urlopen(url) as r:
+                  return json.load(r)
+
+          if code == "AI":
+              # Android Studio is not on data.services; its own feed numbers releases by
+              # AS version, so match on the platform build instead.
+              items = get("https://jb.gg/android-studio-releases-list.json")["content"]["item"]
+              rel = next(i for i in items
+                         if i["channel"] == "Release" and i["platformBuild"].startswith(branch + "."))
+              link = next(d["link"] for d in rel["download"] if d["link"].endswith("-linux.tar.gz"))
+              version = rel["version"]
+          else:
+              rel = get(f"https://data.services.jetbrains.com/products/releases"
+                        f"?code={code}&type=release&majorVersion={major}")[code][0]
+              link, version = rel["downloads"]["linux"]["link"], rel["version"]
+
+          print(f"link={link}")
+          print(f"version={version}")
+          EOF
+
+      - name: Download ${{ matrix.name }} ${{ steps.ide.outputs.version }}
+        run: |
+          mkdir ide
+          curl -fsSL "${{ steps.ide.outputs.link }}" | tar -xz -C ide --strip-components=1
+
+      - name: Run the plugin verifier
+        run: |
+          curl -fsSL -o verifier.jar \
+            "https://repo1.maven.org/maven2/org/jetbrains/intellij/plugins/verifier-cli/${VERIFIER_VERSION}/verifier-cli-${VERIFIER_VERSION}-all.jar"
+          java -jar verifier.jar check-plugin plugin/*.zip ide \
+            -verification-reports-dir reports | tee verifier.log
+
+      - name: Check the verdict
+        # The verifier exits 0 even when it finds compatibility problems; the verdict is
+        # only in the "Plugin <id> against <IDE>: <verdict>" line. "Compatible" may be
+        # followed by notes such as internal-API usage, which AgentIconService is.
+        run: |
+          verdicts=$(grep -E '^Plugin .+ against .+: ' verifier.log || true)
+          if [ -z "$verdicts" ]; then
+            echo "::error::No verification verdict in the verifier output"
+            exit 1
+          fi
+          echo "$verdicts"
+          echo "### ${{ matrix.name }} ${{ steps.ide.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "$verdicts" >> "$GITHUB_STEP_SUMMARY"
+          if echo "$verdicts" | grep -vqE ': Compatible'; then
+            echo "::error::${{ matrix.name }} is not compatible"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verifier-report-${{ matrix.code }}
+          path: |
+            verifier.log
+            reports/
+          if-no-files-found: ignore
+
+  marketplace:
+    # Schedules the same runs on the Marketplace version page ("Compatibility verification"),
+    # which on its own only verifies against IntelliJ IDEA. The endpoints are the ones the
+    # page's "Schedule Verification" button calls — not a published API, so this job may
+    # break when Marketplace changes; the `verify` job above does not depend on it.
+    name: Marketplace verification
+    runs-on: ubuntu-latest
+    env:
+      TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      PLUGIN_ID: "33150"
+      # ideVersion prefixes as Marketplace lists them. IC and PC have had no release on
+      # 262 (unified distributions), so they are reported and skipped rather than failed.
+      PRODUCTS: "IU IC PY PC WS PS RM RR GO CL AI"
+    steps:
+      - name: Schedule verifications
+        run: |
+          python3 - <<'EOF'
+          import json, os, sys, time, urllib.error, urllib.parse, urllib.request
+
+          api = "https://plugins.jetbrains.com/api"
+          token, plugin = os.environ["TOKEN"], os.environ["PLUGIN_ID"]
+          version = os.environ["TAG"].removeprefix("v")
+          branch = os.environ["PLATFORM_BRANCH"] + "."
+
+          if not token:
+              sys.exit("::error::JETBRAINS_MARKETPLACE_TOKEN secret is not set")
+
+          def call(path, method="GET"):
+              req = urllib.request.Request(api + path, method=method, headers={
+                  "Authorization": f"Bearer {token}", "Accept": "application/json"})
+              with urllib.request.urlopen(req) as r:
+                  body = r.read()
+                  return json.loads(body) if body else None
+
+          # The zip is uploaded to Marketplace by hand, possibly after the GitHub release
+          # is published, so wait for the version to show up instead of failing at once.
+          update = None
+          for attempt in range(60):
+              update = next((u for u in call(f"/plugins/{plugin}/updates?channel=&size=20")
+                             if u["version"] == version), None)
+              if update:
+                  break
+              print(f"{version} not on Marketplace yet, retrying in 60 s")
+              time.sleep(60)
+          if not update:
+              sys.exit(f"::error::Version {version} did not appear on Marketplace within an hour")
+          update_id = update["id"]
+          print(f"Marketplace update {update_id} for {version}")
+
+          def build(ide_version):
+              return [int(p) for p in ide_version.split("-", 1)[1].split(".") if p.isdigit()]
+
+          # Pick the newest release (not EAP/Canary/RC) build on our platform branch per
+          # product; the page's own default is the newest EAP, which is out of range.
+          newest = {}
+          for p in call(f"/verifications/update/{update_id}/products"):
+              code, _, ide_build = p["ideVersion"].partition("-")
+              if not ide_build.startswith(branch) or not p.get("isRelease"):
+                  continue
+              if code not in newest or build(p["ideVersion"]) > build(newest[code]["ideVersion"]):
+                  newest[code] = p
+          print("Release builds on", branch + "*:", ", ".join(sorted(newest)))
+
+          failed = False
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"### Marketplace verifications for {version} (update {update_id})\n")
+              for code in os.environ["PRODUCTS"].split():
+                  p = newest.get(code)
+                  if not p:
+                      print(f"::warning::{code}: Marketplace has no {branch}* release build, skipped")
+                      summary.write(f"- {code}: no {branch}* release build, skipped\n")
+                      continue
+                  query = urllib.parse.urlencode({"ideVersion": p["ideVersion"],
+                                                  "verificationType": "INTELLIJ_COMPATIBILITY"})
+                  try:
+                      call(f"/verifications/update/{update_id}?{query}", method="POST")
+                      line = f"{p['fullPresentableVersion']} ({p['ideVersion']}): scheduled"
+                  except urllib.error.HTTPError as e:
+                      failed = True
+                      line = f"{p['fullPresentableVersion']} ({p['ideVersion']}): HTTP {e.code} {e.read()[:300]!r}"
+                      print(f"::error::{line}")
+                  print(line)
+                  summary.write(f"- {line}\n")
+          sys.exit(1 if failed else 0)
+          EOF
