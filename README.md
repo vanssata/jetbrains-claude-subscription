@@ -204,4 +204,4 @@ expired login while your terminal uses a different one. Sign in once without
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Third-party names and the non-commercial notice: [TRADEMARKS.md](TRADEMARKS.md).
