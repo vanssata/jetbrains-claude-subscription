@@ -131,8 +131,14 @@ what to install — not a silent failure.
 ## Settings
 
 Edit them under `Settings → Tools → Claude Subscription`. Applying rewrites the agent entry
-immediately; the IDE watches `acp.json`, so no restart is needed. The model is a dropdown
-(`opus`, `opus[1m]`, `sonnet`, `haiku`, `fable[1m]`) that also accepts any typed model id.
+immediately; the IDE watches `acp.json`, so no restart is needed. The model dropdown is
+filled by the agent itself — each time the page opens, the plugin starts the ACP package in
+the background and reads the models it offers your plan (e.g. Opus 5.5, Sonnet 5.5,
+Fable 5.1), so new models appear without a plugin update. Only what the agent lists can be
+picked — the plugin carries no model list of its own, so the dropdown stays empty until
+the agent has answered once while you are logged in. The last list is remembered, and a
+model saved earlier that the agent no longer offers stays selected, marked as such, until
+you change it.
 Renaming the agent removes the entry under the old name. State is stored in
 `claude-subscription-acp.xml`:
 

@@ -26,16 +26,23 @@ absolute machine-specific paths; do not "fix" them to coordinates or downloads.
 
 ## Verifying a change
 
-There are **no JVM tests** — `./gradlew test` compiles nothing meaningful and proves nothing.
-Do not report a change as verified because Gradle succeeded.
+`./gradlew test` runs plain JUnit 5 tests (no platform test framework, no running IDE) over
+the pure logic: parsing the agent's model list, its persisted form, the dropdown items.
+They say nothing about the plugin loading in the IDE — do not report a change as verified
+because Gradle succeeded.
 
 Real verification is manual: build the zip, then
 `Settings → Plugins → ⚙ → Install Plugin from Disk…`, restart, and check that
 **Claude Subscription** appears in the AI chat agent picker with the Claude icon.
 
-`test/handshake.sh` is the one automated check. It starts the ACP package outside the IDE and
+`test/handshake.sh` is the automated end-to-end check. It starts the ACP package outside the IDE and
 asserts that the `claude-ai-login` auth method is offered — i.e. that the thing this plugin
 exists for still works. Run it after any change to the package spec or node resolution.
+
+`test/models.sh` does the same for the model dropdown: it sends `initialize` and
+`session/new` and asserts the agent lists models. It needs a Claude login and prints SKIP
+without one. Run it after a package bump — the dropdown has no fallback list, so a package
+that stops reporting models leaves it empty.
 
 ## Gotchas
 

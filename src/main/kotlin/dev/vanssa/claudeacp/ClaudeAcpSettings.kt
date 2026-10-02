@@ -35,7 +35,20 @@ class ClaudeAcpSettings : SimplePersistentStateComponent<ClaudeAcpSettings.State
          * the `model:` from their own definitions, and those without one inherit this.
          */
         var model: String? by string("")
+
+        /**
+         * The last model list the agent reported, as `id<TAB>name`. Kept so the dropdown
+         * is filled at once — asking the agent takes seconds — and is only replaced by
+         * a successful query, never emptied by a failed one.
+         */
+        var knownModels: MutableList<String> by list()
     }
+
+    var knownModels: List<ModelChoice>
+        get() = state.knownModels.mapNotNull(ModelChoice::decode)
+        set(value) {
+            state.knownModels = value.mapTo(mutableListOf()) { it.encode() }
+        }
 
     val displayName: String get() = state.displayName ?: DEFAULT_DISPLAY_NAME
     val packageSpec: String get() = state.packageSpec ?: DEFAULT_PACKAGE_SPEC
