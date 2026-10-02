@@ -9,13 +9,20 @@
 -->
 <plugins>
     <plugin id="dev.vanssa.claudeacp"
-            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.2.1/jetbrains-claude-subscription-0.2.1.zip"
-            version="0.2.1">
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.3.0/jetbrains-claude-subscription-0.3.0.zip"
+            version="0.3.0">
         <idea-version since-build="262" until-build="262.*"/>
         <name>Claude Subscription ACP Agent</name>
         <vendor>vanssa</vendor>
         <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
         <change-notes><![CDATA[
+            <b>0.3.0</b><br/>
+            New settings page under <i>Settings → Tools → Claude Subscription</i>. The model
+            dropdown lists only the models the agent offers your plan (the plugin no longer
+            ships its own list), filtered by <code>availableModels</code> in
+            <code>~/.claude/settings.json</code>. On macOS, node installed by vfox, mise, asdf,
+            nvm, fnm, Volta, nodenv or Homebrew is now found when the IDE is started from the
+            Dock. ACP package updated to claude-agent-acp 0.85.1 (Opus 5.5).<br/><br/>
             <b>0.2.1</b><br/>
             Node.js is now found on Windows: <code>node.exe</code> with the flat
             <code>node_modules\npm</code> layout (official installer, nvm-windows), and IDE
