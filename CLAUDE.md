@@ -33,7 +33,7 @@ because Gradle succeeded.
 
 Real verification is manual: build the zip, then
 `Settings → Plugins → ⚙ → Install Plugin from Disk…`, restart, and check that
-**Claude Subscription** appears in the AI chat agent picker with the Claude icon.
+**Claude Subscription** appears in the AI chat agent picker.
 
 `test/handshake.sh` is the automated end-to-end check. It starts the ACP package outside the IDE and
 asserts that the `claude-ai-login` auth method is offered — i.e. that the thing this plugin
@@ -53,12 +53,18 @@ that stops reporting models leaves it empty.
   `updatePlugins.xml` (`version` and the asset `url`), plus the download link in `README.md`.
   The IDE polls `updatePlugins.xml` on `master` and downloads from its `url` at once, so it
   must reach `master` no earlier than the release asset it points to exists.
-- **The `262`–`263.*` build range is deliberate.** `AgentIconService` is internal AI Assistant
-  API, not a published contract. Do not widen `untilBuild` to gain forward compatibility that
-  has not been tested. Adding a branch means: run the plugin verifier against that branch's
-  IDE, confirm `AgentIconService` and `AgentIconService.loadIcon` in that branch's AI
-  Assistant are unchanged, then add the branch to both `PLATFORM_BRANCHES` and the `verify`
-  matrix in `.github/workflows/verify-release.yml`, and to the README requirements.
+- **The `262`–`263.*` build range is deliberate.** The plugin relies on how AI Assistant reads
+  `acp.json` and launches local agents, which is IDE behaviour, not a published contract. Do
+  not widen `untilBuild` to gain forward compatibility that has not been tested. Adding a
+  branch means: run the plugin verifier against that branch's IDE, confirm the
+  `acp.schema.json` bundled with that branch's AI Assistant still accepts the entry the
+  plugin writes, then add the branch to both `PLATFORM_BRANCHES` and the `verify` matrix in
+  `.github/workflows/verify-release.yml`, and to the README requirements.
+- **Use no AI Assistant classes.** Everything under `com.intellij.ml.llm` is internal API
+  (JetBrains Marketplace guideline 2.1). The agent icon was dropped for this reason: its only
+  seam, `agentIconService`, also put the plugin in every other agent's icon path (guideline
+  2.2). `<depends>com.intellij.ml.llm</depends>` stays because the plugin is useless without
+  AI Assistant, not because it links against it.
 - **`~/.jetbrains/acp.json` is shared.** Every write must merge — it holds other users' agents
   and `default_mcp_settings`. Never overwrite it, and keep the refuse-on-unparseable behaviour
   in `AcpConfigFile`.

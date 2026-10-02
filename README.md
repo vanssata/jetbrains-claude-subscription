@@ -146,7 +146,7 @@ Renaming the agent removes the entry under the old name. State is stored in
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `manageAgent` | `true` | Turn off to stop the plugin touching `acp.json` and manage the entry yourself. |
-| `displayName` | `Claude Subscription` | Also determines the agent id the IDE derives, and therefore icon matching. |
+| `displayName` | `Claude Subscription` | Also determines the agent id the IDE derives, which chat history and per-agent session options follow. Renaming it starts the agent over. |
 | `packageSpec` | `@agentclientprotocol/claude-agent-acp@0.85.1` | Pinned deliberately — the guard being worked around lives in this package. |
 | `model` | *(blank)* | Starting model for the IDE session, written to the agent's `env` as `ANTHROPIC_MODEL` (e.g. `opus`). Blank means the `model` from `~/.claude/settings.json`. |
 
@@ -160,23 +160,13 @@ agent appears.
 
 ## Known limits
 
-- **The icon uses internal API, and sits in every agent's icon path.** `acp.json` has no
-  icon field, so the icon comes from the AI Assistant extension point
-  `com.intellij.ml.llm.core.chat.ui.agentIconService` — internal, not a published
-  contract, hence a build range that covers only the branches it has been verified on
-  (`262`–`263.*`).
-
-  Worth knowing how it behaves: icons resolve through
-  `EP_NAME.extensionList.firstNotNullOf { it.loadIconForAgent(agentId) }`, but
-  `loadIconForAgent` returns a non-null `Icon`. The first registered extension therefore
-  always answers and nothing falls through. Being consulted at all requires
-  `order="first"`, which means this plugin is asked for *every* agent's icon. It answers
-  for its own agent and hands every other one back to the service that would have
-  answered otherwise. If that delegation ever fails, other agents fall back to a generic
-  icon — the failure is cosmetic and logged, never fatal.
-
-  If the extension point breaks outright, the agent itself keeps working; only the icon
-  is lost.
+- **The agent shows the IDE's generic icon.** `acp.json` has no icon field. The only other
+  way to set one is an internal AI Assistant extension point, which earlier versions used
+  and this one deliberately does not: it is not a published contract, and it put the
+  plugin in the icon path of every other agent.
+- **The build range is pinned to verified branches (`262`–`263.*`).** The plugin uses no
+  AI Assistant classes, but it relies on how AI Assistant reads `acp.json` and launches
+  local agents, which can change between IDE branches.
 - **Windows is lightly tested.** Node resolution understands the flat Windows layout
   (`node.exe` next to `node_modules\npm`, as installed by the official installer and
   nvm-windows) and looks for IDE runtimes under `%LOCALAPPDATA%\JetBrains`, but it is
@@ -211,13 +201,6 @@ does not see it. The agent then reads the default location, which can hold an ol
 expired login while your terminal uses a different one. Sign in once without
 `CLAUDE_CONFIG_DIR` set, or start the IDE from that shell.
 
-## Attribution
-
-`icons/claude.svg` is Anthropic's Claude mark, taken from the official Claude Code
-JetBrains plugin so the agent is visually recognisable. This project is a personal
-integration tool, not affiliated with or endorsed by Anthropic or JetBrains, and the mark
-remains Anthropic's.
-
 ## License
 
-[MIT](LICENSE) — except `icons/claude.svg`, which is Anthropic's mark (see Attribution).
+[MIT](LICENSE)

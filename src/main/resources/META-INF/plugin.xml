@@ -15,8 +15,7 @@
 
         This plugin registers the same official
         <code>@agentclientprotocol/claude-agent-acp</code> package as a local agent without
-        that flag, and gives it the Claude icon. Nothing is patched: the package supports
-        subscriptions by default.<br/><br/>
+        that flag. Nothing is patched: the package supports subscriptions by default.<br/><br/>
 
         Not affiliated with or endorsed by Anthropic or JetBrains.
     ]]></description>
@@ -30,11 +29,5 @@
         <applicationConfigurable parentId="tools" id="dev.vanssa.claudeacp.settings"
                                  displayName="Claude Subscription"
                                  instance="dev.vanssa.claudeacp.ClaudeAcpConfigurable"/>
-    </extensions>
-
-    <!-- Internal AI Assistant extension point; see ClaudeAgentIconService for why
-         order="first" matters. -->
-    <extensions defaultExtensionNs="com.intellij.ml.llm.core.chat.ui">
-        <agentIconService implementation="dev.vanssa.claudeacp.ClaudeAgentIconService" order="first"/>
     </extensions>
 </idea-plugin>

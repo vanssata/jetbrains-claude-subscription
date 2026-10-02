@@ -18,7 +18,11 @@ class ClaudeAcpSettings : SimplePersistentStateComponent<ClaudeAcpSettings.State
         /** When off, the plugin stops touching `acp.json` and leaves the entry to the user. */
         var manageAgent: Boolean by property(true)
 
-        /** Also the source of the agent id the IDE derives — see [ClaudeAgent.matches]. */
+        /**
+         * Also the source of the agent id the IDE derives ("Claude Subscription" was
+         * observed to become `acp.claude-subscription`), which chat history and per-agent
+         * session options are keyed by. Renaming the agent starts it over as a new one.
+         */
         var displayName: String? by string(DEFAULT_DISPLAY_NAME)
 
         /**
@@ -60,21 +64,4 @@ class ClaudeAcpSettings : SimplePersistentStateComponent<ClaudeAcpSettings.State
 
         fun getInstance(): ClaudeAcpSettings = service()
     }
-}
-
-object ClaudeAgent {
-
-    /**
-     * Whether [agentId] is the agent this plugin provisions.
-     *
-     * The IDE derives the id from the display name — "Claude Subscription" was observed
-     * to become `acp.claude-subscription`. The exact slug rule is not documented, so the
-     * comparison strips the `acp.` prefix and every separator on both sides instead of
-     * reimplementing a guess at it.
-     */
-    fun matches(agentId: String, displayName: String): Boolean =
-        normalize(agentId.removePrefix("acp.")) == normalize(displayName)
-
-    private fun normalize(value: String): String =
-        value.lowercase().filter { it.isLetterOrDigit() }
 }

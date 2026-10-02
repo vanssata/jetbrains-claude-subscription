@@ -27,12 +27,6 @@ dependencies {
         localPlugin(aiAssistantPath)
     }
 
-    // `AgentIconService` lives in a module jar under the plugin's `lib/modules/`, which is
-    // not on the classpath that `localPlugin` contributes. It is compileOnly by nature:
-    // the AI Assistant plugin supplies the class at runtime, and `plugin.xml` declares the
-    // dependency so the IDE refuses to load us without it.
-    compileOnly(files(aiAssistantPath.map { "$it/lib/modules/intellij.ml.llm.chat.jar" }))
-
     // Plain JUnit 5, not the platform test framework: the tests cover the pure parsing
     // and list logic, which needs Gson from the platform classpath but no running IDE.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
@@ -69,12 +63,12 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 
 intellijPlatform {
     pluginConfiguration {
-        // `AgentIconService` is internal API of the AI Assistant plugin, not a public
-        // extension point contract. Cover only the branches it has been checked on rather
-        // than pretend forward compatibility we have not tested. 263 was added after the
-        // plugin verifier passed against IU-263.6259.32 (2026.3 EAP) and AI Assistant
-        // 263.6259.32 showed the same interface, the same `firstNotNullOf` resolution in
-        // `AgentIconService.loadIcon`, and an identical `acp.json` schema.
+        // No AI Assistant classes are used, but the plugin still relies on how AI Assistant
+        // reads `~/.jetbrains/acp.json` and launches local agents, which is IDE behaviour
+        // rather than a published contract. Cover only the branches the plugin has been checked
+        // on rather than pretend forward compatibility we have not tested. 263 was added after
+        // the plugin verifier passed against IU-263.6259.32 (2026.3 EAP) and the `acp.json`
+        // schema bundled with AI Assistant 263 matched 262's.
         ideaVersion {
             sinceBuild.set("262")
             untilBuild.set("263.*")

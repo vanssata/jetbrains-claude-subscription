@@ -58,7 +58,7 @@ class ClaudeAcpConfigurable : BoundConfigurable("Claude Subscription") {
                         { settings.displayName },
                         { settings.state.displayName = it.trim().ifEmpty { ClaudeAcpSettings.DEFAULT_DISPLAY_NAME } },
                     )
-                    .comment("Also the agent id the IDE derives, which the icon is matched on.")
+                    .comment("Also the agent id the IDE derives. Renaming makes the IDE treat it as a new agent.")
             }
             row("ACP package:") {
                 textField()
