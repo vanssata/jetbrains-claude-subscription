@@ -126,7 +126,7 @@ jobs:
       - name: Check the verdict
         # The verifier exits 0 even when it finds compatibility problems; the verdict is
         # only in the "Plugin <id> against <IDE>: <verdict>" line. "Compatible" may be
-        # followed by notes such as internal-API usage, which AgentIconService is.
+        # followed by notes such as deprecated-API usage.
         run: |
           verdicts=$(grep -E '^Plugin .+ against .+: ' verifier.log || true)
           if [ -z "$verdicts" ]; then
