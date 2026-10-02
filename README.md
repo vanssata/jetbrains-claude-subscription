@@ -15,7 +15,7 @@ Install it and the agent appears. There is nothing else to run.
 JetBrains launches its bundled Claude agent like this:
 
 ```text
-npx -y @agentclientprotocol/claude-agent-acp@0.62.0 --hide-claude-auth
+npx -y @agentclientprotocol/claude-agent-acp@0.85.1 --hide-claude-auth
 ```
 
 That flag does two things inside the package:
@@ -50,7 +50,7 @@ bundled entry.
 
 ## Install
 
-**[⬇ Download jetbrains-claude-subscription-0.2.1.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.2.1/jetbrains-claude-subscription-0.2.1.zip)**
+**[⬇ Download jetbrains-claude-subscription-0.3.0.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.3.0/jetbrains-claude-subscription-0.3.0.zip)**
 — or pick the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
 
 Then in the IDE: `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
@@ -71,7 +71,7 @@ The IDE then offers each new release like a Marketplace update.
 
 ```bash
 JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
-# build/distributions/jetbrains-claude-subscription-0.2.1.zip
+# build/distributions/jetbrains-claude-subscription-0.3.0.zip
 ```
 
 `gradle.properties` sets `platformLocalPath` and `aiAssistantPluginPath` to a locally
@@ -92,7 +92,7 @@ watches for changes:
   "agent_servers": {
     "Claude Subscription": {
       "command": "<node>",
-      "args": ["<npx-cli.js>", "-y", "@agentclientprotocol/claude-agent-acp@0.62.0"],
+      "args": ["<npx-cli.js>", "-y", "@agentclientprotocol/claude-agent-acp@0.85.1"],
       "env": { "PATH": "<node bin>:<inherited PATH>" },
       "use_idea_mcp": true,
       "use_custom_mcp": true
@@ -140,7 +140,7 @@ Renaming the agent removes the entry under the old name. State is stored in
 | --- | --- | --- |
 | `manageAgent` | `true` | Turn off to stop the plugin touching `acp.json` and manage the entry yourself. |
 | `displayName` | `Claude Subscription` | Also determines the agent id the IDE derives, and therefore icon matching. |
-| `packageSpec` | `@agentclientprotocol/claude-agent-acp@0.62.0` | Pinned deliberately — the guard being worked around lives in this package. |
+| `packageSpec` | `@agentclientprotocol/claude-agent-acp@0.85.1` | Pinned deliberately — the guard being worked around lives in this package. |
 | `model` | *(blank)* | Starting model for the IDE session, written to the agent's `env` as `ANTHROPIC_MODEL` (e.g. `opus`). Blank means the `model` from `~/.claude/settings.json`. |
 
 `model` exists because `~/.claude/settings.json` is shared with the CLI. Use it when the IDE

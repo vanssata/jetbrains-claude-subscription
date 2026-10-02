@@ -9,7 +9,7 @@
 # that single flag is the entire difference this plugin exists for.
 set -eu
 
-PACKAGE="${ACP_PACKAGE:-@agentclientprotocol/claude-agent-acp@0.62.0}"
+PACKAGE="${ACP_PACKAGE:-@agentclientprotocol/claude-agent-acp@0.85.1}"
 
 # 1. A system node wins; otherwise fall back to the runtime the IDE downloads for its
 #    own ACP agents (the only node present on some machines).
