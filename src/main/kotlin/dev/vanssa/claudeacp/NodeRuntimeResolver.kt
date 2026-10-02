@@ -19,7 +19,14 @@ import kotlin.io.path.name
  * `#!/usr/bin/env node`, so the children look `node` up on `PATH` and otherwise die
  * with `env: 'node': No such file or directory`.
  */
-data class NodeRuntime(val binDir: Path, val node: Path, val npxCli: Path)
+data class NodeRuntime(val binDir: Path, val node: Path, val npxCli: Path) {
+
+    /** The inherited `PATH` with [binDir] in front, for any process that runs `npx-cli.js`. */
+    fun pathWithBinDir(): String {
+        val inherited = System.getenv("PATH").orEmpty()
+        return if (inherited.isEmpty()) binDir.toString() else binDir.toString() + File.pathSeparator + inherited
+    }
+}
 
 /**
  * Finds a node runtime without requiring the user to install one.

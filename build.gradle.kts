@@ -32,6 +32,16 @@ dependencies {
     // the AI Assistant plugin supplies the class at runtime, and `plugin.xml` declares the
     // dependency so the IDE refuses to load us without it.
     compileOnly(files(aiAssistantPath.map { "$it/lib/modules/intellij.ml.llm.chat.jar" }))
+
+    // Plain JUnit 5, not the platform test framework: the tests cover the pure parsing
+    // and list logic, which needs Gson from the platform classpath but no running IDE.
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 // No jvmToolchain(): the only JDK on this machine is the JetBrains Runtime (25), and
