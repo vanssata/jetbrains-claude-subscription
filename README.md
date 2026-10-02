@@ -1,8 +1,9 @@
 # Subscription ACP Agent
 
 > **Unofficial plugin.** A personal community project — not affiliated with, endorsed by,
-> or supported by JetBrains or Anthropic. It is not distributed on JetBrains Marketplace;
-> install it from the release zip below.
+> or supported by JetBrains or Anthropic. Install it from
+> [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/33150) or from the release zip
+> below.
 
 A JetBrains plugin that adds a **Claude Subscription** agent to AI chat — one that
 authenticates with a Claude.ai Pro/Max subscription instead of demanding Anthropic

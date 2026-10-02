@@ -4,20 +4,56 @@
     <vendor>vanssa</vendor>
 
     <description><![CDATA[
-        Adds a <b>Claude Subscription</b> agent to JetBrains AI chat that authenticates
-        with a Claude.ai Pro/Max subscription.<br/><br/>
+        <p><b>Use your Claude Pro or Max subscription in JetBrains AI chat.</b> No Anthropic API
+        key, no JetBrains AI credits, no manual npm setup.</p>
 
-        The Claude agent bundled with the IDE is launched with <code>--hide-claude-auth</code>,
-        which removes the subscription auth method and rejects subscription credentials at
-        session start with <i>"This integration does not support using claude.ai subscriptions"</i> —
-        surfacing as <i>"Authentication was reset. Please create a new chat for the change to
-        take effect."</i><br/><br/>
+        <p>Adds a <b>Claude Subscription</b> agent to the AI Assistant chat. It runs
+        <code>@agentclientprotocol/claude-agent-acp</code>, the official Claude adapter for the
+        Agent Client Protocol (ACP), built on the Claude Agent SDK that powers Claude Code. You
+        sign in with your Claude.ai account.</p>
 
-        This plugin registers the same official
-        <code>@agentclientprotocol/claude-agent-acp</code> package as a local agent without
-        that flag. Nothing is patched: the package supports subscriptions by default.<br/><br/>
+        <h3>Why this plugin</h3>
+        <p>The Claude agent bundled with the IDE runs on JetBrains AI credits or an Anthropic API
+        key. It is launched with <code>--hide-claude-auth</code>, which removes the subscription
+        sign-in and rejects subscription credentials with <i>"This integration does not support
+        using claude.ai subscriptions"</i>, shown in chat as <i>"Authentication was reset. Please
+        create a new chat for the change to take effect."</i> This plugin registers the same
+        package as a local ACP agent without that flag. Nothing is patched: the package supports
+        subscription sign-in by default.</p>
 
-        Not affiliated with or endorsed by Anthropic or JetBrains.
+        <h3>What you get</h3>
+        <ul>
+          <li>Install and restart. The agent is added to <code>~/.jetbrains/acp.json</code> for
+          you, merged with your other agents, with a backup of the original file.</li>
+          <li>Sign in with the standard Claude.ai Pro/Max login. No API key.</li>
+          <li>Node.js is found automatically: the IDE's own runtime, nvm, fnm, Volta, asdf, mise,
+          vfox, nodenv or Homebrew, and the official installer or nvm-windows on Windows.</li>
+          <li>A settings page, <i>Settings → Tools → Subscription ACP Agent</i>, with a model
+          dropdown that lists the models your plan offers.</li>
+          <li>Works in IntelliJ IDEA, PyCharm, WebStorm, PhpStorm, GoLand, RubyMine, RustRover and
+          CLion 2026.2 and 2026.3, and Android Studio on 2026.2.</li>
+          <li>Open source, MIT licensed.</li>
+        </ul>
+
+        <h3>Requirements</h3>
+        <ul>
+          <li>The JetBrains AI Assistant plugin</li>
+          <li>A Claude Pro or Max subscription</li>
+          <li>Node.js, which is usually already present</li>
+        </ul>
+
+        <h3>FAQ</h3>
+        <p><b>How is this different from the Claude agent bundled with the IDE?</b> The bundled
+        agent runs on JetBrains AI credits or an Anthropic API key. This one signs in with your
+        Claude.ai subscription.</p>
+        <p><b>How is this different from installing the ACP adapter with npm myself?</b> It is the
+        same package. The plugin removes the global npm install and the hand-edited agent
+        config, and it pins a tested package version that moves forward with plugin updates.</p>
+        <p><b>Does it consume JetBrains AI credits?</b> No. The agent runs under your own Claude
+        subscription.</p>
+
+        <p>Unofficial community plugin, not affiliated with or endorsed by Anthropic or JetBrains.
+        Claude is a trademark of Anthropic.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
