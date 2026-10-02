@@ -52,7 +52,7 @@ bundled entry.
 
 ## Install
 
-**[⬇ Download jetbrains-claude-subscription-0.3.2.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.3.2/jetbrains-claude-subscription-0.3.2.zip)**
+**[⬇ Download jetbrains-claude-subscription-0.4.0.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.4.0/jetbrains-claude-subscription-0.4.0.zip)**
 — or pick the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
 
 Then in the IDE: `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
@@ -73,7 +73,7 @@ The IDE then offers each new release like a Marketplace update.
 
 ```bash
 JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
-# build/distributions/jetbrains-claude-subscription-0.3.2.zip
+# build/distributions/jetbrains-claude-subscription-0.4.0.zip
 ```
 
 `gradle.properties` sets `platformLocalPath` and `aiAssistantPluginPath` to a locally
