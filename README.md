@@ -174,6 +174,30 @@ agent appears.
   log. The bundled agent logs it too; the Claude ACP wrapper does not use ACP session
   modes.
 
+## Troubleshooting
+
+### `Internal error: Failed to authenticate: OAuth session expired and could not be refreshed`
+
+Your claude.ai sign-in expired and Claude Code could not renew it. The message comes from
+Claude Code inside the ACP package, not from this plugin. The package turns only a
+"Please run /login" error into the IDE's login prompt, so this one reaches the chat as a
+bare internal error with no way to sign in again from there.
+
+Sign in again outside the IDE, then start a new chat (or restart the IDE):
+
+```bash
+claude /login        # or: npx @anthropic-ai/claude-code /login
+```
+
+Choose the Claude subscription login. The agent reads the same stored credentials as
+Claude Code in your terminal (`~/.claude/.credentials.json`, or the Keychain on macOS), so
+one sign-in fixes both.
+
+If you set `CLAUDE_CONFIG_DIR` in a shell profile, an IDE started from the macOS Dock
+does not see it. The agent then reads the default location, which can hold an old,
+expired login while your terminal uses a different one. Sign in once without
+`CLAUDE_CONFIG_DIR` set, or start the IDE from that shell.
+
 ## Attribution
 
 `icons/claude.svg` is Anthropic's Claude mark, taken from the official Claude Code
