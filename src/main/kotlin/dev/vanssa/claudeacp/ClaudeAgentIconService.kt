@@ -21,8 +21,9 @@ import javax.swing.Icon
  * this class in the path of *every* agent's icon, not just ours. Everything we do not
  * own is handed straight back to whichever service would have answered otherwise.
  *
- * This is internal AI Assistant API, not a published contract — hence the `262.*` build
- * range. If it breaks, the agent itself keeps working; only the icon is lost.
+ * This is internal AI Assistant API, not a published contract — hence a build range
+ * (`262`–`263.*`) that covers only the branches it has been verified on. If it breaks,
+ * the agent itself keeps working; only the icon is lost.
  */
 class ClaudeAgentIconService : AgentIconService {
 

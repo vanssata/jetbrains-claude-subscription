@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "dev.vanssa"
-version = "0.3.1"
+version = "0.3.2"
 
 repositories {
     mavenCentral()
@@ -70,11 +70,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 intellijPlatform {
     pluginConfiguration {
         // `AgentIconService` is internal API of the AI Assistant plugin, not a public
-        // extension point contract. Pin to the 262 branch rather than pretend forward
-        // compatibility we have not tested.
+        // extension point contract. Cover only the branches it has been checked on rather
+        // than pretend forward compatibility we have not tested. 263 was added after the
+        // plugin verifier passed against IU-263.6259.32 (2026.3 EAP) and AI Assistant
+        // 263.6259.32 showed the same interface, the same `firstNotNullOf` resolution in
+        // `AgentIconService.loadIcon`, and an identical `acp.json` schema.
         ideaVersion {
             sinceBuild.set("262")
-            untilBuild.set("262.*")
+            untilBuild.set("263.*")
         }
     }
 

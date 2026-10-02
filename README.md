@@ -44,13 +44,14 @@ bundled entry.
 
 ## Requirements
 
-- A JetBrains IDE on the **262.\*** branch (2026.2) with the AI Assistant plugin.
+- A JetBrains IDE on the **262.\*** or **263.\*** branch (2026.2 or 2026.3) with the AI
+  Assistant plugin.
 - A Claude.ai Pro or Max subscription.
 - Node.js — but see below, one is usually already present.
 
 ## Install
 
-**[⬇ Download jetbrains-claude-subscription-0.3.1.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.3.1/jetbrains-claude-subscription-0.3.1.zip)**
+**[⬇ Download jetbrains-claude-subscription-0.3.2.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.3.2/jetbrains-claude-subscription-0.3.2.zip)**
 — or pick the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
 
 Then in the IDE: `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
@@ -71,7 +72,7 @@ The IDE then offers each new release like a Marketplace update.
 
 ```bash
 JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
-# build/distributions/jetbrains-claude-subscription-0.3.1.zip
+# build/distributions/jetbrains-claude-subscription-0.3.2.zip
 ```
 
 `gradle.properties` sets `platformLocalPath` and `aiAssistantPluginPath` to a locally
@@ -162,7 +163,8 @@ agent appears.
 - **The icon uses internal API, and sits in every agent's icon path.** `acp.json` has no
   icon field, so the icon comes from the AI Assistant extension point
   `com.intellij.ml.llm.core.chat.ui.agentIconService` — internal, not a published
-  contract, hence the `262.*` build range.
+  contract, hence a build range that covers only the branches it has been verified on
+  (`262`–`263.*`).
 
   Worth knowing how it behaves: icons resolve through
   `EP_NAME.extensionList.firstNotNullOf { it.loadIconForAgent(agentId) }`, but

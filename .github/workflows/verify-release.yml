@@ -23,20 +23,28 @@ permissions:
   contents: read
 
 env:
-  # Same branch as `untilBuild` in build.gradle.kts; bump together.
-  IDE_MAJOR: "2026.2"
-  PLATFORM_BRANCH: "262"
+  # Every platform branch from `sinceBuild` to `untilBuild` in build.gradle.kts; bump
+  # together. The `verify` matrix repeats the list, since `env` is not available in
+  # `strategy`.
+  PLATFORM_BRANCHES: "262 263"
   VERIFIER_VERSION: "1.410"
 
 jobs:
   verify:
-    name: ${{ matrix.name }}
+    name: ${{ matrix.name }} ${{ matrix.branch }}
     runs-on: ubuntu-latest
     strategy:
       # One IDE per job: each unpacked IDE plus the downloaded AI Assistant dependency is
       # several GB, too much to hold all of them on one runner's disk.
       fail-fast: false
       matrix:
+        # Same list as PLATFORM_BRANCHES.
+        branch: ["262", "263"]
+        code: [IIU, PCP, WS, PS, RM, RR, GO, CL, AI]
+        exclude:
+          # Android Studio has no 263-based build in any channel of its feed yet. Drop
+          # this once one appears, or the 263 range goes unverified for it.
+          - { branch: "263", code: AI }
         include:
           - { code: IIU, name: IntelliJ IDEA }
           - { code: PCP, name: PyCharm }
@@ -62,15 +70,17 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.zip' --dir plugin
           ls -l plugin
 
-      - name: Resolve the latest ${{ env.IDE_MAJOR }} build
+      - name: Resolve the newest ${{ matrix.branch }} build
         id: ide
         env:
           CODE: ${{ matrix.code }}
+          BRANCH: ${{ matrix.branch }}
         run: |
           python3 - <<'EOF' >> "$GITHUB_OUTPUT"
-          import json, os, urllib.request
+          import json, os, sys, urllib.request
 
-          code, major, branch = os.environ["CODE"], os.environ["IDE_MAJOR"], os.environ["PLATFORM_BRANCH"]
+          code, branch = os.environ["CODE"], os.environ["BRANCH"]
+          major = f"20{branch[:2]}.{branch[2:]}"  # 262 -> 2026.2
 
           def get(url):
               with urllib.request.urlopen(url) as r:
@@ -85,9 +95,17 @@ jobs:
               link = next(d["link"] for d in rel["download"] if d["link"].endswith("-linux.tar.gz"))
               version = rel["version"]
           else:
-              rel = get(f"https://data.services.jetbrains.com/products/releases"
-                        f"?code={code}&type=release&majorVersion={major}")[code][0]
-              link, version = rel["downloads"]["linux"]["link"], rel["version"]
+              # A branch still in EAP (263 until 2026.3 ships) has no release, so fall
+              # back to its newest RC, then EAP: the build its users actually run.
+              for kind in ("release", "rc", "eap"):
+                  rels = get(f"https://data.services.jetbrains.com/products/releases"
+                             f"?code={code}&type={kind}&majorVersion={major}")[code]
+                  if rels:
+                      break
+              else:
+                  sys.exit(f"No {major} build of {code} on data.services")
+              rel = rels[0]
+              link, version = rel["downloads"]["linux"]["link"], f"{rel['version']} ({rel['build']})"
 
           print(f"link={link}")
           print(f"version={version}")
@@ -126,7 +144,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: verifier-report-${{ matrix.code }}
+          name: verifier-report-${{ matrix.code }}-${{ matrix.branch }}
           path: |
             verifier.log
             reports/
@@ -143,8 +161,8 @@ jobs:
       TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       PLUGIN_ID: "33150"
-      # ideVersion prefixes as Marketplace lists them. IC and PC have had no release on
-      # 262 (unified distributions), so they are reported and skipped rather than failed.
+      # ideVersion prefixes as Marketplace lists them. IC and PC have had no build on 262
+      # or 263 (unified distributions), so they are reported and skipped rather than failed.
       PRODUCTS: "IU IC PY PC WS PS RM RR GO CL AI"
     steps:
       - name: Schedule verifications
@@ -155,7 +173,7 @@ jobs:
           api = "https://plugins.jetbrains.com/api"
           token, plugin = os.environ["TOKEN"], os.environ["PLUGIN_ID"]
           version = os.environ["TAG"].removeprefix("v")
-          branch = os.environ["PLATFORM_BRANCH"] + "."
+          branches = os.environ["PLATFORM_BRANCHES"].split()
 
           if not token:
               sys.exit("::error::JETBRAINS_MARKETPLACE_TOKEN secret is not set")
@@ -185,26 +203,29 @@ jobs:
           def build(ide_version):
               return [int(p) for p in ide_version.split("-", 1)[1].split(".") if p.isdigit()]
 
-          # Pick the newest release (not EAP/Canary/RC) build on our platform branch per
-          # product; the page's own default is the newest EAP, which is out of range.
+          # Per product and platform branch, pick the newest release build, or the newest
+          # EAP/RC while the branch has no release yet (263 until 2026.3 ships). The
+          # page's own default is the newest EAP overall, which can be out of range.
           newest = {}
           for p in call(f"/verifications/update/{update_id}/products"):
               code, _, ide_build = p["ideVersion"].partition("-")
-              if not ide_build.startswith(branch) or not p.get("isRelease"):
+              key = (code, ide_build.split(".", 1)[0])
+              if key[1] not in branches:
                   continue
-              if code not in newest or build(p["ideVersion"]) > build(newest[code]["ideVersion"]):
-                  newest[code] = p
-          print("Release builds on", branch + "*:", ", ".join(sorted(newest)))
+              rank = (bool(p.get("isRelease")), build(p["ideVersion"]))
+              if key not in newest or rank > newest[key][0]:
+                  newest[key] = (rank, p)
+          print("Builds in range:", ", ".join(f"{c}-{b}" for c, b in sorted(newest)))
 
           failed = False
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
               summary.write(f"### Marketplace verifications for {version} (update {update_id})\n")
-              for code in os.environ["PRODUCTS"].split():
-                  p = newest.get(code)
-                  if not p:
-                      print(f"::warning::{code}: Marketplace has no {branch}* release build, skipped")
-                      summary.write(f"- {code}: no {branch}* release build, skipped\n")
+              for code, branch in ((c, b) for c in os.environ["PRODUCTS"].split() for b in branches):
+                  if (code, branch) not in newest:
+                      print(f"::warning::{code}: Marketplace has no {branch}.* build, skipped")
+                      summary.write(f"- {code}: no {branch}.* build, skipped\n")
                       continue
+                  p = newest[(code, branch)][1]
                   query = urllib.parse.urlencode({"ideVersion": p["ideVersion"],
                                                   "verificationType": "INTELLIJ_COMPATIBILITY"})
                   try:
