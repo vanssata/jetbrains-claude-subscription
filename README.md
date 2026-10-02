@@ -120,6 +120,11 @@ Two findings drove the shape:
   a version number, so freezing it would break on the next runtime update. The plugin
   re-resolves and rewrites only when the result actually changed.
 
+An IDE started from the macOS Dock does not see what your shell profile adds to `PATH`,
+so before falling back to the IDE runtime the plugin also checks the default install
+locations of vfox, mise, asdf, nvm, fnm, Volta, nodenv and (on macOS) Homebrew, taking
+the newest node 22 or later it finds there.
+
 If neither a system node nor an IDE runtime is found, you get a notification explaining
 what to install — not a silent failure.
 
