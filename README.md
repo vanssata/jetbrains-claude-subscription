@@ -1,4 +1,4 @@
-# Claude Subscription ACP Agent
+# Subscription ACP Agent
 
 > **Unofficial plugin.** A personal community project — not affiliated with, endorsed by,
 > or supported by JetBrains or Anthropic. It is not distributed on JetBrains Marketplace;
@@ -131,7 +131,7 @@ what to install — not a silent failure.
 
 ## Settings
 
-Edit them under `Settings → Tools → Claude Subscription`. Applying rewrites the agent entry
+Edit them under `Settings → Tools → Subscription ACP Agent`. Applying rewrites the agent entry
 immediately; the IDE watches `acp.json`, so no restart is needed. The model dropdown is
 filled by the agent itself — each time the page opens, the plugin starts the ACP package in
 the background and reads the models it offers your plan (e.g. Opus 5.5, Sonnet 5.5,

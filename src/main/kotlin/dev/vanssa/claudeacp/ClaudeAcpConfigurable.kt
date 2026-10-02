@@ -15,8 +15,8 @@ import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
 import com.intellij.ui.layout.selected
 import javax.swing.DefaultComboBoxModel
 
-/** `Settings → Tools → Claude Subscription`: the state that used to be XML-only. */
-class ClaudeAcpConfigurable : BoundConfigurable("Claude Subscription") {
+/** `Settings → Tools → Subscription ACP Agent`: the state that used to be XML-only. */
+class ClaudeAcpConfigurable : BoundConfigurable("Subscription ACP Agent") {
 
     private val settings = ClaudeAcpSettings.getInstance()
     private val modelItems = DefaultComboBoxModel<String>()

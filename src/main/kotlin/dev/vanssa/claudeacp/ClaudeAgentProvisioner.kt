@@ -122,7 +122,7 @@ class ClaudeAgentProvisioner : ProjectActivity {
 
     private companion object {
         val LOG = logger<ClaudeAgentProvisioner>()
-        const val NOTIFICATION_GROUP = "Claude Subscription ACP"
+        const val NOTIFICATION_GROUP = "Subscription ACP Agent"
 
         /** `ProjectActivity` runs per opened project; the config is application-wide. */
         val provisionedThisSession = AtomicBoolean(false)

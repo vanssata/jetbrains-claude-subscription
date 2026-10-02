@@ -65,6 +65,11 @@ that stops reporting models leaves it empty.
   seam, `agentIconService`, also put the plugin in every other agent's icon path (guideline
   2.2). `<depends>com.intellij.ml.llm</depends>` stays because the plugin is useless without
   AI Assistant, not because it links against it.
+- **The plugin name carries no third-party trademark** (guideline 1.2, Anthropic trademark
+  guidelines), and the plugin ships no Claude logo. The agent's default display name
+  "Claude Subscription" stays as it is, for two reasons. The agent id, and with it existing
+  chats, derives from that name. And a menu of agents naming the model is the use
+  Anthropic's Agent SDK branding guidelines allow.
 - **`~/.jetbrains/acp.json` is shared.** Every write must merge — it holds other users' agents
   and `default_mcp_settings`. Never overwrite it, and keep the refuse-on-unparseable behaviour
   in `AcpConfigFile`.
