@@ -9,13 +9,18 @@
 -->
 <plugins>
     <plugin id="dev.vanssa.claudeacp"
-            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.3.2/jetbrains-claude-subscription-0.3.2.zip"
-            version="0.3.2">
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.4.0/jetbrains-claude-subscription-0.4.0.zip"
+            version="0.4.0">
         <idea-version since-build="262" until-build="263.*"/>
-        <name>Claude Subscription ACP Agent</name>
+        <name>Subscription ACP Agent</name>
         <vendor>vanssa</vendor>
         <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
         <change-notes><![CDATA[
+            <b>0.4.0</b><br/>
+            Renamed to <i>Subscription ACP Agent</i>. The settings page is now
+            <i>Settings → Tools → Subscription ACP Agent</i>. The agent shows the IDE's generic
+            icon: the Claude icon relied on internal AI Assistant API and has been removed. The
+            agent itself, its id and your settings are unchanged.<br/><br/>
             <b>0.3.2</b><br/>
             Supports 2026.3 (263.*) IDEs alongside 2026.2.<br/><br/>
             <b>0.3.0</b><br/>
