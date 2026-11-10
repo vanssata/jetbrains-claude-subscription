@@ -7,6 +7,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -24,15 +25,25 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ClaudeAgentProvisioner : ProjectActivity {
 
     override suspend fun execute(project: Project) {
-        if (!provisionedThisSession.compareAndSet(false, true)) return
-        provision()
+        if (provisionedThisSession.compareAndSet(false, true)) provisionHost()
+
+        // Each WSL distribution gets its entry the first time one of its projects opens,
+        // not for every installed distribution: an entry for a distribution the user never
+        // opens a project in would only be a dead item in the agent picker.
+        val distribution = wslDistributionOf(project.basePath) ?: return
+        if (wslDistributions.add(distribution)) provisionWsl(distribution)
     }
 
     /**
-     * Writes the entry for the current settings. Also called by the settings page on
+     * Writes the entries for the current settings. Also called by the settings page on
      * apply: the IDE watches `acp.json`, so a change takes effect without a restart.
      */
     fun provision() {
+        provisionHost()
+        wslDistributions.forEach(::provisionWsl)
+    }
+
+    private fun provisionHost() {
         val settings = ClaudeAcpSettings.getInstance()
         if (!settings.state.manageAgent) {
             LOG.info("Agent management disabled in settings; leaving ${AcpConfigFile.path} alone")
@@ -52,19 +63,54 @@ class ClaudeAgentProvisioner : ProjectActivity {
             return
         }
 
-        val entry = buildEntry(runtime, settings.packageSpec, settings.model)
-        when (val outcome = AcpConfigFile.upsertAgent(settings.displayName, entry)) {
+        val entry =
+            buildEntry(runtime.node.toString(), runtime.npxArgs(settings.packageSpec), runtime.pathWithBinDir(), settings.model)
+        write(settings.displayName, entry, runtime.node.toString()) {
+            "Added \"${settings.displayName}\" to the AI chat agent list. " +
+                "Pick it there and authenticate with your Claude subscription."
+        }
+    }
+
+    /**
+     * The IDE reads only the host's `acp.json`, also for a project inside WSL, and runs the
+     * entry's `command` inside the distribution. The host entry names a Windows node there
+     * and cannot start (issue #22), so the distribution gets an entry of its own, with its
+     * own node, under a name the user picks in that project's chat.
+     */
+    private fun provisionWsl(distribution: String) {
+        val settings = ClaudeAcpSettings.getInstance()
+        if (!settings.state.manageAgent) return
+
+        val name = wslAgentName(settings.displayName, distribution)
+        val runtime = WslNodeResolver.resolve(distribution)
+        if (runtime == null) {
+            val floor = NodeRuntimeResolver.MIN_NODE_MAJOR
+            LOG.warn("No node >= $floor found in WSL $distribution; cannot register $name")
+            notify(
+                NotificationType.WARNING,
+                "No Node.js $floor or later found in WSL $distribution",
+                "Projects in $distribution run the agent inside the distribution, with its own Node.js. " +
+                    "Install Node.js $floor or later there, then reopen the project.",
+            )
+            return
+        }
+
+        val entry = buildEntry(runtime.node, runtime.npxArgs(settings.packageSpec), runtime.path(), settings.model)
+        write(name, entry, "${runtime.node} in WSL $distribution") {
+            "Added \"$name\" to the AI chat agent list. Pick it in projects inside $distribution — " +
+                "\"${settings.displayName}\" runs on Windows and cannot start there. " +
+                "The agent signs in separately inside the distribution."
+        }
+    }
+
+    private fun write(name: String, entry: JsonObject, nodeDescription: String, added: () -> String) {
+        when (val outcome = AcpConfigFile.upsertAgent(name, entry)) {
             AcpConfigFile.Outcome.UNCHANGED ->
-                LOG.info("Claude ACP agent already up to date in ${AcpConfigFile.path}")
+                LOG.info("$name already up to date in ${AcpConfigFile.path}")
 
             AcpConfigFile.Outcome.WRITTEN -> {
-                LOG.info("Registered Claude ACP agent in ${AcpConfigFile.path} using ${runtime.node}")
-                notify(
-                    NotificationType.INFORMATION,
-                    "Claude Subscription agent ready",
-                    "Added \"${settings.displayName}\" to the AI chat agent list. " +
-                        "Pick it there and authenticate with your Claude subscription.",
-                )
+                LOG.info("Registered $name in ${AcpConfigFile.path} using $nodeDescription")
+                notify(NotificationType.INFORMATION, "Claude Subscription agent ready", added())
             }
 
             AcpConfigFile.Outcome.REFUSED_UNPARSEABLE -> {
@@ -83,20 +129,20 @@ class ClaudeAgentProvisioner : ProjectActivity {
      * Note what is *absent*: `--hide-claude-auth`. Everything else mirrors how the IDE
      * launches the bundled agent.
      */
-    private fun buildEntry(runtime: NodeRuntime, packageSpec: String, model: String?): JsonObject {
-        val args = JsonArray().apply { runtime.npxArgs(packageSpec).forEach(::add) }
+    private fun buildEntry(command: String, npxArgs: List<String>, path: String, model: String?): JsonObject {
+        val args = JsonArray().apply { npxArgs.forEach(::add) }
 
         // `npx-cli.js` spawns helpers via `#!/usr/bin/env node`, so the runtime's bin
         // directory has to be on PATH — an absolute `command` alone is not enough.
         val env = JsonObject().apply {
-            addProperty("PATH", runtime.pathWithBinDir())
+            addProperty("PATH", path)
             // The package ranks `ANTHROPIC_MODEL` above `settings.json`'s `model`, so
             // this is the one knob that changes the IDE session without touching the CLI.
             if (model != null) addProperty("ANTHROPIC_MODEL", model)
         }
 
         return JsonObject().apply {
-            addProperty("command", runtime.node.toString())
+            addProperty("command", command)
             add("args", args)
             add("env", env)
             addProperty("use_idea_mcp", true)
@@ -117,5 +163,8 @@ class ClaudeAgentProvisioner : ProjectActivity {
 
         /** `ProjectActivity` runs per opened project; the config is application-wide. */
         val provisionedThisSession = AtomicBoolean(false)
+
+        /** Distributions whose entry this session wrote, rewritten on settings apply. */
+        val wslDistributions: MutableSet<String> = ConcurrentHashMap.newKeySet()
     }
 }

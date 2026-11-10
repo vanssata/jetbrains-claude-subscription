@@ -86,6 +86,13 @@ that stops reporting models leaves it empty.
 - **`~/.jetbrains/acp.json` is shared.** Every write must merge — it holds other users' agents
   and `default_mcp_settings`. Never overwrite it, and keep the refuse-on-unparseable behaviour
   in `AcpConfigFile`.
+- **WSL projects get their own entry** (`Claude Subscription (WSL: <distro>)`). AI Assistant
+  reads only the host's `acp.json` (`user.home`), also for a WSL project, and runs the
+  entry's `command` inside the distribution, resolved as a path there; the host entry's
+  Windows node fails with `EelPathException` (issue #22). `"command": "npx"` would make
+  the IDE pick its own runtime per machine, but loses `--prefix` (#21) and the user's node,
+  and its generic Linux node does not run on NixOS. Node inside the distribution is found
+  by `wsl-node-probe.sh`, fed to `wsl.exe` on stdin; it is POSIX sh on purpose.
 - **The `--prefix` value is npm's global prefix on purpose.** npx exports it to the agent as
   `npm_config_prefix`, which every `npm` the agent runs reads as the global prefix. An
   empty directory would fix `EBADDEVENGINES` just as well and quietly redirect the agent's

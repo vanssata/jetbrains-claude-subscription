@@ -52,7 +52,7 @@ bundled entry.
 
 ## Install
 
-**[⬇ Download jetbrains-claude-subscription-0.5.0.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.0/jetbrains-claude-subscription-0.5.0.zip)**
+**[⬇ Download jetbrains-claude-subscription-0.5.1.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.1/jetbrains-claude-subscription-0.5.1.zip)**
 — or pick the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
 
 Then in the IDE: `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
@@ -73,7 +73,7 @@ The IDE then offers each new release like a Marketplace update.
 
 ```bash
 JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
-# build/distributions/jetbrains-claude-subscription-0.5.0.zip
+# build/distributions/jetbrains-claude-subscription-0.5.1.zip
 ```
 
 `gradle.properties` sets `platformLocalPath` and `aiAssistantPluginPath` to a locally
@@ -144,6 +144,26 @@ the newest node 22 or later it finds there.
 If neither a node 22 or later nor an IDE runtime is found, you get a notification explaining
 what to install — not a silent failure.
 
+## WSL projects
+
+The IDE reads only the Windows `acp.json`, also for a project inside a WSL distribution,
+and starts that project's agent *inside* the distribution. The Windows entry names a
+Windows `node.exe` there and cannot start ("The agent could not connect").
+
+So the first time a project from a distribution opens, the plugin adds a second entry,
+named after the distribution, e.g. **Claude Subscription (WSL: Ubuntu)**, with a node found inside that
+distribution: on the `PATH` of your login shell there, then in the default locations of
+vfox, mise, asdf, nvm, fnm, Volta and nodenv, then in the runtime the IDE downloads into the
+distribution for its own agents. The same node 22 floor applies. Pick that entry in the
+chat of projects inside the distribution; the plain entry stays for Windows projects.
+
+- Node.js 22 or later has to be available inside the distribution. Without one you get a
+  notification naming the distribution, and no WSL entry is written.
+- The agent signs in separately there: it reads the credentials of Claude Code inside the
+  distribution (`~/.claude` there), not the Windows ones.
+- On NixOS, the IDE-downloaded runtime only runs with `nix-ld`; a node from your profile
+  (`home.packages`, `environment.systemPackages`) works without it.
+
 ## Settings
 
 Edit them under `Settings → Tools → Subscription ACP Agent`. Applying rewrites the agent entry
@@ -155,7 +175,7 @@ picked — the plugin carries no model list of its own, so the dropdown stays em
 the agent has answered once while you are logged in. The last list is remembered, and a
 model saved earlier that the agent no longer offers stays selected, marked as such, until
 you change it.
-Renaming the agent removes the entry under the old name. State is stored in
+Renaming the agent removes the entries under the old name, WSL ones included. State is stored in
 `claude-subscription-acp.xml`:
 
 | Key | Default | Meaning |
@@ -185,7 +205,10 @@ agent appears.
 - **Windows is lightly tested.** Node resolution understands the flat Windows layout
   (`node.exe` next to `node_modules\npm`, as installed by the official installer and
   nvm-windows) and looks for IDE runtimes under `%LOCALAPPDATA%\JetBrains`, but it is
-  developed and verified on Linux.
+  developed and verified on Linux. The WSL entries were verified against the IDE's launch
+  code and a Linux shell, not yet on a Windows machine.
+- **Two agents in the picker with WSL.** `acp.json` has one `command` per entry and no
+  way to tell the IDE which entry belongs to which machine, so both are listed everywhere.
 - **Unsupported by JetBrains.** They disabled this deliberately in their bundled entry.
   An IDE update can change the behaviour this relies on.
 - A harmless `AcpModeManager - Agent ... has no registered modes` warning appears in the

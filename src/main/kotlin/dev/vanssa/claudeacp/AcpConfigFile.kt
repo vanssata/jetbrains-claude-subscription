@@ -58,12 +58,17 @@ object AcpConfigFile {
     }
 
     /** Drops our entry, leaving the rest of the file alone. */
+    fun removeAgent(name: String): Outcome = removeAgents { it == name }
+
+    /** Drops every entry whose name matches [which], leaving the rest of the file alone. */
     @Synchronized
-    fun removeAgent(name: String): Outcome {
+    fun removeAgents(which: (String) -> Boolean): Outcome {
         val root = read() ?: return Outcome.REFUSED_UNPARSEABLE
         val servers = root.getAsJsonObject(AGENT_SERVERS) ?: return Outcome.UNCHANGED
-        if (servers.remove(name) == null) return Outcome.UNCHANGED
+        val names = servers.keySet().filter(which)
+        if (names.isEmpty()) return Outcome.UNCHANGED
 
+        names.forEach(servers::remove)
         write(root)
         return Outcome.WRITTEN
     }
