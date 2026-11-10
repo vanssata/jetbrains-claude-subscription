@@ -24,6 +24,12 @@ The build resolves the platform and the AI Assistant plugin from **local install
 `platformLocalPath` and `aiAssistantPluginPath` properties in `gradle.properties`. Those are
 absolute machine-specific paths; do not "fix" them to coordinates or downloads.
 
+Without that machine, `.github/workflows/build.yml` is the build: it downloads an IDE and
+the matching AI Assistant, passes both paths with `-P`, and uploads the zip as a run
+artifact on every push. Run by hand with `draft_release` ticked, it also attaches the zip
+to a draft release `v<version>`. The same works in any Linux shell — the workflow's steps
+are the recipe, with the downloaded IDE's `jbr` as `JAVA_HOME`.
+
 ## Verifying a change
 
 `./gradlew test` runs plain JUnit 5 tests (no platform test framework, no running IDE) over
@@ -38,6 +44,10 @@ Real verification is manual: build the zip, then
 `test/handshake.sh` is the automated end-to-end check. It starts the ACP package outside the IDE and
 asserts that the `claude-ai-login` auth method is offered — i.e. that the thing this plugin
 exists for still works. Run it after any change to the package spec or node resolution.
+It starts the agent from a project that pins pnpm through `devEngines`, so it also fails
+when the `--prefix` argument stops doing its job. In a remote shell (`SSH_CONNECTION`,
+`NO_BROWSER` or `CLAUDE_CODE_REMOTE` set) the package offers `claude-login` instead and the
+script fails for that reason alone; unset those to run it there.
 
 `test/models.sh` does the same for the model dropdown: it sends `initialize` and
 `session/new` and asserts the agent lists models. It needs a Claude login and prints SKIP
@@ -48,7 +58,7 @@ that stops reporting models leaves it empty.
 
 - **The pinned ACP package version lives in four places** and they must not drift:
   `ClaudeAcpSettings.DEFAULT_PACKAGE_SPEC`, `test/handshake.sh`, and two spots in `README.md`.
-  Use `/bump-acp` rather than editing by hand.
+  Use `/bump-acp` (`.claude/skills/bump-acp`) rather than editing by hand.
 - **A release bumps the version in two places**: `version` in `build.gradle.kts` and
   `updatePlugins.xml` (`version` and the asset `url`), plus the download link in `README.md`.
   The IDE polls `updatePlugins.xml` on `master` and downloads from its `url` at once, so it
@@ -73,6 +83,10 @@ that stops reporting models leaves it empty.
 - **`~/.jetbrains/acp.json` is shared.** Every write must merge — it holds other users' agents
   and `default_mcp_settings`. Never overwrite it, and keep the refuse-on-unparseable behaviour
   in `AcpConfigFile`.
+- **The `--prefix` value is npm's global prefix on purpose.** npx exports it to the agent as
+  `npm_config_prefix`, which every `npm` the agent runs reads as the global prefix. An
+  empty directory would fix `EBADDEVENGINES` just as well and quietly redirect the agent's
+  `npm install -g`.
 - **The node `PATH` entry is load-bearing.** `npx-cli.js` re-execs helpers through
   `#!/usr/bin/env node`, so an absolute node path alone fails. The path is also re-resolved on
   every startup because the IDE's fallback runtime path carries a version number.
