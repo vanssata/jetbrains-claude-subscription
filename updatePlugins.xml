@@ -9,13 +9,19 @@
 -->
 <plugins>
     <plugin id="dev.vanssa.claudeacp"
-            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.4.0/jetbrains-claude-subscription-0.4.0.zip"
-            version="0.4.0">
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.0/jetbrains-claude-subscription-0.5.0.zip"
+            version="0.5.0">
         <idea-version since-build="262" until-build="263.*"/>
         <name>Subscription ACP Agent</name>
         <vendor>vanssa</vendor>
         <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
         <change-notes><![CDATA[
+            <b>0.5.0</b><br/>
+            The agent now starts in projects whose <code>package.json</code> pins pnpm, yarn or
+            bun through <code>devEngines</code> (npx stopped with <code>EBADDEVENGINES</code>).
+            A Node.js older than 22 on <code>PATH</code> is skipped instead of being used, so
+            it no longer hides a usable runtime. ACP package updated to claude-agent-acp
+            0.100.0, which brings prompt suggestions.<br/><br/>
             <b>0.4.0</b><br/>
             Renamed to <i>Subscription ACP Agent</i>. The settings page is now
             <i>Settings → Tools → Subscription ACP Agent</i>. The agent shows the IDE's generic
