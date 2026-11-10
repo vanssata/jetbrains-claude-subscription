@@ -7,7 +7,7 @@
         <p><b>Use your Claude Pro or Max subscription in JetBrains AI chat.</b> No Anthropic API
         key, no JetBrains AI credits, no manual npm setup.</p>
 
-        <p>Adds a <b>Claude Subscription</b> agent to the AI Assistant chat. It runs
+        <p>Adds a <b>Claude Subscription</b> agent to the AI Assistant or Air chat. It runs
         <code>@agentclientprotocol/claude-agent-acp</code>, the official Claude adapter for the
         Agent Client Protocol (ACP), built on the Claude Agent SDK that powers Claude Code. You
         sign in with your Claude.ai account.</p>
@@ -39,7 +39,7 @@
 
         <h3>Requirements</h3>
         <ul>
-          <li>The JetBrains AI Assistant plugin</li>
+          <li>The JetBrains AI Assistant or Air plugin</li>
           <li>A Claude Pro or Max subscription</li>
           <li>Node.js, which is usually already present</li>
         </ul>
@@ -59,7 +59,14 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
-    <depends>com.intellij.ml.llm</depends>
+    <!--
+      Either host reads the agent from ~/.jetbrains/acp.json, so neither is required (issue #24):
+      Air carries its own copy of AI Assistant's ACP runtime, with the same file and entry fields.
+      Optional only so the IDE loads the plugin after whichever of them is present; no class of
+      either is used, so the config files are empty.
+    -->
+    <depends optional="true" config-file="claudeacp-with-ai-assistant.xml">com.intellij.ml.llm</depends>
+    <depends optional="true" config-file="claudeacp-with-air.xml">com.intellij.air</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="dev.vanssa.claudeacp.ClaudeAgentProvisioner"/>

@@ -46,7 +46,8 @@ bundled entry.
 ## Requirements
 
 - A JetBrains IDE on the **262.\*** or **263.\*** branch (2026.2 or 2026.3) with the AI
-  Assistant plugin.
+  Assistant plugin or the Air plugin. Both read the agent from the same `acp.json`; Air
+  works without AI Assistant installed.
 - A Claude.ai Pro or Max subscription.
 - Node.js — but see below, one is usually already present.
 
