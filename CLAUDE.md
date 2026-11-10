@@ -63,6 +63,9 @@ that stops reporting models leaves it empty.
   `updatePlugins.xml` (`version` and the asset `url`), plus the download link in `README.md`.
   The IDE polls `updatePlugins.xml` on `master` and downloads from its `url` at once, so it
   must reach `master` no earlier than the release asset it points to exists.
+  Publishing the GitHub release also uploads its zip to Marketplace (`upload` job in
+  `verify-release.yml`, after the verifier passes). A Marketplace update can be neither
+  edited nor replaced, so publish only a zip that has been tried in an IDE.
 - **The `262`–`263.*` build range is deliberate.** The plugin relies on how AI Assistant reads
   `acp.json` and launches local agents, which is IDE behaviour, not a published contract. Do
   not widen `untilBuild` to gain forward compatibility that has not been tested. Adding a
