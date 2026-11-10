@@ -2,6 +2,7 @@ package dev.vanssa.claudeacp
 
 import com.intellij.util.EnvironmentUtil
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -26,13 +27,68 @@ data class NodeRuntime(val binDir: Path, val node: Path, val npxCli: Path) {
         val inherited = System.getenv("PATH").orEmpty()
         return if (inherited.isEmpty()) binDir.toString() else binDir.toString() + File.pathSeparator + inherited
     }
+
+    /** What follows [node] on the command line to run [packageSpec]. */
+    fun npxArgs(packageSpec: String): List<String> = npxArgs(npxCli, globalPrefix(), packageSpec)
+
+    /**
+     * npm's global prefix for this runtime, or null when npm does not name a usable one.
+     *
+     * Asked rather than derived from [binDir]: a `prefix` line in the user's `.npmrc`, or
+     * the Windows installer's `%APPDATA%\npm`, moves it away from the node install. Run
+     * from [binDir] because `npm config` fails on the same `devEngines` check as npx when
+     * its working directory is such a project.
+     */
+    private fun globalPrefix(): Path? = runCatching {
+        val npmCli = npxCli.resolveSibling("npm-cli.js").toString()
+        val process = ProcessBuilder(node.toString(), npmCli, "config", "get", "prefix")
+            .directory(binDir.toFile())
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .apply { environment()["PATH"] = pathWithBinDir() }
+            .start()
+        if (!process.waitFor(15, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return@runCatching null
+        }
+        val prefix = Paths.get(process.inputStream.bufferedReader().readText().trim())
+        // npm fails with `ENOENT … lstat` on a prefix that does not exist, and on Windows
+        // `%APPDATA%\npm` does not until the first global install creates it.
+        if (prefix.isAbsolute) Files.createDirectories(prefix) else null
+    }.getOrNull()
 }
+
+/**
+ * `--prefix` is there for projects whose `package.json` pins another package manager
+ * through `devEngines` (issue #21). The IDE starts the agent in the project root, npm
+ * takes the nearest `package.json` as its local prefix, and `npx` then refuses to run
+ * with `EBADDEVENGINES`. Naming a prefix on the command line is the only way to point
+ * npm elsewhere without changing the working directory, which the agent needs.
+ *
+ * It is the global prefix, not an empty directory of the plugin's own: npx exports
+ * `--prefix` to the agent as `npm_config_prefix`, where every `npm` the agent runs reads
+ * it as the *global* prefix. npx exports the global prefix under that name anyway, so
+ * passing the same value changes nothing for the agent, while any other directory would
+ * redirect its `npm install -g` and hide the global `npmrc`.
+ *
+ * Without a [prefix] the flag is left out: the agent then starts everywhere it did before.
+ */
+internal fun npxArgs(npxCli: Path, prefix: Path?, packageSpec: String): List<String> =
+    buildList {
+        add(npxCli.toString())
+        if (prefix != null) {
+            add("--prefix")
+            add(prefix.toString())
+        }
+        add("-y")
+        add(packageSpec)
+    }
 
 /**
  * Finds a node runtime without requiring the user to install one.
  *
  * A system node is preferred when present, then one installed by a version manager
- * or Homebrew outside `PATH`. The fallback is the runtime the IDE
+ * or Homebrew outside `PATH`; either has to be node >= [MIN_NODE_MAJOR]. The fallback
+ * is the runtime the IDE
  * downloads for its own ACP agents — on a machine whose only node is that one, this
  * is what makes the plugin work at all. Its path carries the node version
  * (`.../.runtimes/node/24.13.0/bin`), so it is resolved on every startup rather than
@@ -48,6 +104,12 @@ object NodeRuntimeResolver {
      * the shell environment the platform loads at startup carries what `.zshrc` added.
      * Blocks until that load finishes, so callers stay off the EDT. The process `PATH`
      * is still scanned after it, so a node found before this change is never lost.
+     *
+     * A node on `PATH` is the user's choice, but one below [MIN_NODE_MAJOR] cannot be
+     * honoured: with nvm-windows on node 14 its npx 6 rejected the arguments with
+     * "You must supply a command" while the IDE's own runtime sat unused (issue #20).
+     * Such an entry is skipped, not treated as the end of the search, so a newer node
+     * further down `PATH` still wins.
      */
     private fun fromSystemPath(): NodeRuntime? {
         val paths = listOfNotNull(EnvironmentUtil.getValue("PATH"), System.getenv("PATH")).distinct()
@@ -57,7 +119,8 @@ object NodeRuntimeResolver {
             // Inside runCatching: on Windows a PATH entry with quotes or other illegal
             // characters makes Paths.get throw, and one bad entry must not hide node.
             .mapNotNull { runCatching { runtimeAt(Paths.get(it.trim().removeSurrounding("\""))) }.getOrNull() }
-            .firstOrNull()
+            .distinct()
+            .firstOrNull(::isNewEnough)
     }
 
     /**
@@ -68,9 +131,9 @@ object NodeRuntimeResolver {
      * install directories are fixed, so they are probed directly, in roughly the order
      * a shell would put them on `PATH`: version managers before Homebrew.
      *
-     * Unlike a `PATH` hit, nothing here is a choice the user made for this shell, so a
-     * stale install (an old nvm `v16`, a leftover `/usr/local/bin/node`) must not shadow
-     * the IDE's working runtime: each candidate has to report node >= [MIN_NODE_MAJOR].
+     * Nothing here is a choice the user made for this shell, so a stale install (an old
+     * nvm `v16`, a leftover `/usr/local/bin/node`) is likely, and it must not shadow the
+     * IDE's working runtime: each candidate has to report node >= [MIN_NODE_MAJOR].
      */
     private fun fromVersionManagers(): NodeRuntime? {
         if (IS_WINDOWS) return null
@@ -96,8 +159,10 @@ object NodeRuntimeResolver {
         val homebrew = if (IS_MAC) sequenceOf(Paths.get("/opt/homebrew/bin"), Paths.get("/usr/local/bin")) else emptySequence()
         return (current + versioned + homebrew)
             .mapNotNull { runCatching { runtimeAt(it) }.getOrNull() }
-            .firstOrNull { (majorVersion(it.node) ?: 0) >= MIN_NODE_MAJOR }
+            .firstOrNull(::isNewEnough)
     }
+
+    private fun isNewEnough(runtime: NodeRuntime): Boolean = (majorVersion(runtime.node) ?: 0) >= MIN_NODE_MAJOR
 
     /**
      * Asks the binary rather than trusting a directory name: vfox's link and Homebrew's
@@ -109,8 +174,12 @@ object NodeRuntimeResolver {
             process.destroyForcibly()
             return@runCatching null
         }
-        process.inputStream.bufferedReader().readText().trim().removePrefix("v").substringBefore('.').toIntOrNull()
+        parseMajor(process.inputStream.bufferedReader().readText())
     }.getOrNull()
+
+    /** `v24.13.0` -> 24. Null for anything else, e.g. the error text of a broken shim. */
+    internal fun parseMajor(versionOutput: String): Int? =
+        versionOutput.trim().removePrefix("v").substringBefore('.').toIntOrNull()
 
     private fun fromIdeRuntimes(): NodeRuntime? =
         ideCacheRoots()
@@ -171,7 +240,7 @@ object NodeRuntimeResolver {
     private val IS_MAC = System.getProperty("os.name").orEmpty().startsWith("Mac")
 
     /** The ACP package's `engines` floor; npx only warns below it and the agent then crashes. */
-    private const val MIN_NODE_MAJOR = 22
+    internal const val MIN_NODE_MAJOR = 22
 
     private fun Path.childDirectories(): List<Path> =
         runCatching { listDirectoryEntries().filter { it.isDirectory() } }.getOrElse { emptyList() }

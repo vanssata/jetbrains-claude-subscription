@@ -60,7 +60,7 @@ class ClaudeAcpSettings : SimplePersistentStateComponent<ClaudeAcpSettings.State
 
     companion object {
         const val DEFAULT_DISPLAY_NAME: String = "Claude Subscription"
-        const val DEFAULT_PACKAGE_SPEC: String = "@agentclientprotocol/claude-agent-acp@0.85.1"
+        const val DEFAULT_PACKAGE_SPEC: String = "@agentclientprotocol/claude-agent-acp@0.100.0"
 
         fun getInstance(): ClaudeAcpSettings = service()
     }

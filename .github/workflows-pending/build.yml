@@ -1,0 +1,144 @@
+# Builds the plugin zip on a runner, so a change or a release does not need a machine with
+# an IDE installed.
+#
+# The Gradle build resolves the platform and AI Assistant from local installs
+# (`platformLocalPath`, `aiAssistantPluginPath` in gradle.properties). Here both are
+# downloaded and passed with -P, which leaves gradle.properties alone for local builds.
+#
+# What this proves is what `./gradlew test` and `test/handshake.sh` prove. It does not load
+# the plugin in an IDE: that check stays manual, with the zip from the run's artifacts.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      draft_release:
+        description: Attach the zip to a draft release v<version> of the chosen branch
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # The IDE to compile against: the newest release of the `sinceBuild` branch in
+  # build.gradle.kts. PhpStorm because that is what the plugin is developed on; any IDE of
+  # the branch would do, the plugin uses platform API only.
+  IDE_CODE: PS
+  IDE_MAJOR: "2026.2"
+
+jobs:
+  build:
+    name: Build the plugin zip
+    runs-on: ubuntu-latest
+    # A branch of this repository with an open pull request gets both events; the push
+    # run is enough. Pull requests from forks have no push run here.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    outputs:
+      version: ${{ steps.zip.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve the newest ${{ env.IDE_MAJOR }} build
+        id: ide
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os, urllib.request
+
+          code, major = os.environ["IDE_CODE"], os.environ["IDE_MAJOR"]
+          url = (f"https://data.services.jetbrains.com/products/releases"
+                 f"?code={code}&type=release&majorVersion={major}")
+          with urllib.request.urlopen(url) as r:
+              rel = json.load(r)[code][0]
+          print(f"link={rel['downloads']['linux']['link']}")
+          print(f"build={rel['build']}")
+          print(f"version={rel['version']}")
+          EOF
+
+      # Over a gigabyte per download otherwise; the key changes when a new build ships.
+      - uses: actions/cache@v4
+        id: ide-cache
+        with:
+          path: ${{ runner.temp }}/platform
+          key: platform-${{ env.IDE_CODE }}-${{ steps.ide.outputs.build }}
+
+      - name: Download the IDE ${{ steps.ide.outputs.version }} and its AI Assistant
+        if: steps.ide-cache.outputs.cache-hit != 'true'
+        env:
+          LINK: ${{ steps.ide.outputs.link }}
+          BUILD: ${{ steps.ide.outputs.build }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/platform/ide" "$RUNNER_TEMP/platform/plugins"
+          curl -fsSL "$LINK" | tar -xz -C "$RUNNER_TEMP/platform/ide" --strip-components=1
+          # AI Assistant is not inside the IDE archive and is versioned per IDE build, so
+          # Marketplace is asked for the update that matches this one.
+          curl -fsSL -o ml-llm.zip \
+            "https://plugins.jetbrains.com/pluginManager?action=download&id=com.intellij.ml.llm&build=${IDE_CODE}-${BUILD}"
+          unzip -q ml-llm.zip -d "$RUNNER_TEMP/platform/plugins"
+
+      # The pinned ACP package needs node >= 22, which a runner image does not promise.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test, lint and build
+        # The IDE's own runtime as the JDK, as in a local build: the IntelliJ Platform
+        # Gradle plugin asks for the Java version the platform runs on, and no toolchain
+        # repository is configured to fetch one.
+        run: |
+          JAVA_HOME="$RUNNER_TEMP/platform/ide/jbr" ./gradlew --no-daemon \
+            -PplatformLocalPath="$RUNNER_TEMP/platform/ide" \
+            -PaiAssistantPluginPath="$RUNNER_TEMP/platform/plugins/ml-llm" \
+            test lintKotlin buildPlugin
+
+      - name: Handshake with the pinned ACP package
+        run: sh test/handshake.sh
+
+      - name: Name the zip
+        id: zip
+        run: |
+          ls -l build/distributions
+          zip=$(ls build/distributions/*.zip)
+          version=${zip##*/jetbrains-claude-subscription-}
+          echo "version=${version%.zip}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jetbrains-claude-subscription-${{ steps.zip.outputs.version }}
+          path: build/distributions/*.zip
+          if-no-files-found: error
+
+  draft-release:
+    # A draft, not a published release: publishing is what starts "Verify release", and
+    # the IDE downloads from the release as soon as updatePlugins.xml on master names it.
+    # Both stay a decision made by hand, after the zip has been tried in an IDE.
+    name: Draft release v${{ needs.build.outputs.version }}
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.draft_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: jetbrains-claude-subscription-${{ needs.build.outputs.version }}
+
+      - name: Create the draft, or replace the zip of an existing one
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.build.outputs.version }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft > state 2>/dev/null; then
+            # Replacing the zip under a published release would change what the update
+            # feed already serves to installed IDEs.
+            if [ "$(cat state)" != "true" ]; then
+              echo "::error::$TAG is already published; bump the version in build.gradle.kts"
+              exit 1
+            fi
+            gh release upload "$TAG" ./*.zip --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" ./*.zip --repo "$GITHUB_REPOSITORY" --draft \
+              --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          fi

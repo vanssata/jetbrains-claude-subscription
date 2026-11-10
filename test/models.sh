@@ -32,6 +32,9 @@ if [ -z "${NODE_BIN:-}" ] || [ ! -x "${NODE_BIN}/node" ]; then
 fi
 
 NPX_CLI="${NODE_BIN}/../lib/node_modules/npm/bin/npx-cli.js"
+# The same `--prefix` the plugin passes; handshake.sh shows what it is for.
+PREFIX=$(cd "${NODE_BIN}" && env PATH="${NODE_BIN}:${PATH}" \
+    "${NODE_BIN}/node" "$(dirname "${NPX_CLI}")/npm-cli.js" config get prefix)
 echo "node:    ${NODE_BIN}/node"
 echo "package: ${PACKAGE}"
 
@@ -46,11 +49,11 @@ SESSION='{"jsonrpc":"2.0","id":2,"method":"session/new","params":{"cwd":"'"${WOR
 # stdin stays open until the session answers: closing it early makes the agent exit
 # before session/new completes. python reads until id 2 arrives, then stops the agent.
 cd "${WORK}"
-env PATH="${NODE_BIN}:${PATH}" python3 - "${NODE_BIN}/node" "${NPX_CLI}" "${PACKAGE}" "${INIT}" "${SESSION}" <<'EOF'
+env PATH="${NODE_BIN}:${PATH}" python3 - "${NODE_BIN}/node" "${NPX_CLI}" "${PREFIX}" "${PACKAGE}" "${INIT}" "${SESSION}" <<'EOF'
 import json, subprocess, sys, threading
 
-node, npx, package, init, session = sys.argv[1:]
-agent = subprocess.Popen([node, npx, "-y", package], stdin=subprocess.PIPE,
+node, npx, prefix, package, init, session = sys.argv[1:]
+agent = subprocess.Popen([node, npx, "--prefix", prefix, "-y", package], stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                          start_new_session=True)
 timer = threading.Timer(120, agent.kill)

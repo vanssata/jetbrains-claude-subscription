@@ -6,4 +6,7 @@ out/
 .idea/
 *.iml
 local.properties
-.claude
+# Local Claude Code state stays out; the skills are part of the repository, because
+# CLAUDE.md sends people to them (/bump-acp).
+.claude/*
+!.claude/skills/
