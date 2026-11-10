@@ -80,6 +80,10 @@ JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
 installed IDE so the build does not download a full platform. Point them at your own
 installation.
 
+Without an IDE at hand, take the zip from the artifacts of a
+[Build workflow](https://github.com/vanssata/jetbrains-claude-subscription/actions/workflows/build.yml)
+run: it builds every pushed branch against a downloaded IDE.
+
 On first startup the agent is registered and a notification confirms it. Select
 **Claude Subscription** in the AI chat agent picker and authenticate — the browser flow
 now offers `--claudeai` login instead of `--console`.
@@ -94,7 +98,7 @@ watches for changes:
   "agent_servers": {
     "Claude Subscription": {
       "command": "<node>",
-      "args": ["<npx-cli.js>", "-y", "@agentclientprotocol/claude-agent-acp@0.85.1"],
+      "args": ["<npx-cli.js>", "--prefix", "<npm global prefix>", "-y", "@agentclientprotocol/claude-agent-acp@0.85.1"],
       "env": { "PATH": "<node bin>:<inherited PATH>" },
       "use_idea_mcp": true,
       "use_custom_mcp": true
@@ -111,7 +115,7 @@ was in it.
 
 ### Why the command looks like that
 
-Two findings drove the shape:
+Three findings drove the shape:
 
 - **`npx` is not enough on its own.** `npx-cli.js` re-execs its helpers through
   `#!/usr/bin/env node`, so the node binary must be on `PATH`. Calling it by absolute
@@ -122,12 +126,22 @@ Two findings drove the shape:
   a version number, so freezing it would break on the next runtime update. The plugin
   re-resolves and rewrites only when the result actually changed.
 
+- **`--prefix` keeps npm out of the project.** The IDE starts the agent in the project
+  root. In a project whose `package.json` pins pnpm, yarn or bun through `devEngines`, npx
+  would stop there with `EBADDEVENGINES` before the agent ever ran. `--prefix` points npm
+  away from the project while the agent keeps it as its working directory. The value is
+  npm's own global prefix, so the `npm` commands the agent runs behave as they did
+  before.
+
+A node older than 22 is skipped wherever it is found, on `PATH` included: the ACP package
+needs 22, and an old npx fails on the arguments instead of saying so.
+
 An IDE started from the macOS Dock does not see what your shell profile adds to `PATH`,
 so before falling back to the IDE runtime the plugin also checks the default install
 locations of vfox, mise, asdf, nvm, fnm, Volta, nodenv and (on macOS) Homebrew, taking
 the newest node 22 or later it finds there.
 
-If neither a system node nor an IDE runtime is found, you get a notification explaining
+If neither a node 22 or later nor an IDE runtime is found, you get a notification explaining
 what to install — not a silent failure.
 
 ## Settings

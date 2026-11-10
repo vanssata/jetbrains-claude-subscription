@@ -37,7 +37,7 @@ object AcpModelCatalog {
     /** Null when the agent could not be started, is not logged in, or answered oddly. */
     fun fetch(runtime: NodeRuntime, packageSpec: String): List<ModelChoice>? {
         val process = runCatching {
-            ProcessBuilder(runtime.node.toString(), runtime.npxCli.toString(), "-y", packageSpec)
+            ProcessBuilder(listOf(runtime.node.toString()) + runtime.npxArgs(packageSpec))
                 .directory(workDir())
                 .redirectError(ProcessBuilder.Redirect.DISCARD)
                 .apply { environment()["PATH"] = runtime.pathWithBinDir() }

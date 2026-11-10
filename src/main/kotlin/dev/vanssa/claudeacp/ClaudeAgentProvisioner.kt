@@ -7,7 +7,6 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -42,11 +41,12 @@ class ClaudeAgentProvisioner : ProjectActivity {
 
         val runtime = NodeRuntimeResolver.resolve()
         if (runtime == null) {
-            LOG.warn("No node runtime found; cannot register the Claude ACP agent")
+            val floor = NodeRuntimeResolver.MIN_NODE_MAJOR
+            LOG.warn("No node >= $floor found; cannot register the Claude ACP agent")
             notify(
                 NotificationType.WARNING,
-                "No Node.js runtime found",
-                "The Claude Subscription agent needs Node.js. Install it, or run one of the " +
+                "No Node.js $floor or later found",
+                "The Claude Subscription agent needs Node.js $floor or later. Install it, or run one of the " +
                     "bundled ACP agents once so the IDE downloads its own runtime, then restart.",
             )
             return
@@ -84,21 +84,12 @@ class ClaudeAgentProvisioner : ProjectActivity {
      * launches the bundled agent.
      */
     private fun buildEntry(runtime: NodeRuntime, packageSpec: String, model: String?): JsonObject {
-        val args = JsonArray().apply {
-            add(runtime.npxCli.toString())
-            add("-y")
-            add(packageSpec)
-        }
+        val args = JsonArray().apply { runtime.npxArgs(packageSpec).forEach(::add) }
 
         // `npx-cli.js` spawns helpers via `#!/usr/bin/env node`, so the runtime's bin
         // directory has to be on PATH — an absolute `command` alone is not enough.
-        val inheritedPath = System.getenv("PATH").orEmpty()
         val env = JsonObject().apply {
-            addProperty(
-                "PATH",
-                if (inheritedPath.isEmpty()) runtime.binDir.toString()
-                else runtime.binDir.toString() + File.pathSeparator + inheritedPath,
-            )
+            addProperty("PATH", runtime.pathWithBinDir())
             // The package ranks `ANTHROPIC_MODEL` above `settings.json`'s `model`, so
             // this is the one knob that changes the IDE session without touching the CLI.
             if (model != null) addProperty("ANTHROPIC_MODEL", model)

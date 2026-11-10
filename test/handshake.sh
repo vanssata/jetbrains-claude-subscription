@@ -39,15 +39,27 @@ echo "package: ${PACKAGE}"
 #    helpers through `#!/usr/bin/env node`.
 REQUEST='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":true,"writeTextFile":true},"terminal":false,"_meta":{"terminal-auth":true}}}}'
 
-RESPONSE=$(printf '%s\n' "${REQUEST}" | env PATH="${NODE_BIN}:${PATH}" \
-    "${NODE_BIN}/node" "${NPX_CLI}" -y "${PACKAGE}" 2>/dev/null | head -1)
+# 3. Started from a project that pins pnpm through `devEngines`, the way the IDE starts
+#    the agent in a project root: without `--prefix` npx stops there with
+#    EBADDEVENGINES. The prefix is npm's own global one, as in NodeRuntime.npxArgs —
+#    asked for from the node directory because `npm config` fails on that check too.
+PREFIX=$(cd "${NODE_BIN}" && env PATH="${NODE_BIN}:${PATH}" \
+    "${NODE_BIN}/node" "$(dirname "${NPX_CLI}")/npm-cli.js" config get prefix)
+PROJECT=$(mktemp -d)
+trap 'rm -rf "${PROJECT}"' EXIT
+printf '%s\n' '{"devEngines": {"packageManager": {"name": "pnpm", "onFail": "error"}}}' \
+    > "${PROJECT}/package.json"
+echo "prefix:  ${PREFIX}"
+
+RESPONSE=$(cd "${PROJECT}" && printf '%s\n' "${REQUEST}" | env PATH="${NODE_BIN}:${PATH}" \
+    "${NODE_BIN}/node" "${NPX_CLI}" --prefix "${PREFIX}" -y "${PACKAGE}" 2>/dev/null | head -1)
 
 if [ -z "${RESPONSE}" ]; then
     echo "FAIL: agent produced no response" >&2
     exit 1
 fi
 
-# 3. Assert on the auth methods actually offered.
+# 4. Assert on the auth methods actually offered.
 printf '%s' "${RESPONSE}" | python3 -c '
 import json, sys
 
