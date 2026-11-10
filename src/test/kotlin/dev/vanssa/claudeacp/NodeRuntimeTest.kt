@@ -14,14 +14,14 @@ class NodeRuntimeTest {
     fun `the prefix comes before the package spec`() {
         assertEquals(
             listOf(npxCli.toString(), "--prefix", Paths.get("/opt/node").toString(), "-y", "pkg@1.0.0"),
-            npxArgs(npxCli, Paths.get("/opt/node"), "pkg@1.0.0"),
+            npxArgs(npxCli.toString(), Paths.get("/opt/node").toString(), "pkg@1.0.0"),
         )
     }
 
     /** An empty or made-up `--prefix` value would stop the agent from starting at all. */
     @Test
     fun `no prefix flag when npm did not name one`() {
-        assertEquals(listOf(npxCli.toString(), "-y", "pkg@1.0.0"), npxArgs(npxCli, null, "pkg@1.0.0"))
+        assertEquals(listOf(npxCli.toString(), "-y", "pkg@1.0.0"), npxArgs(npxCli.toString(), null, "pkg@1.0.0"))
     }
 
     @Test

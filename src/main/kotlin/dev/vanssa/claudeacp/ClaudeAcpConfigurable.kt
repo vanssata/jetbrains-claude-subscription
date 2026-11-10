@@ -121,7 +121,9 @@ class ClaudeAcpConfigurable : BoundConfigurable("Subscription ACP Agent") {
         ApplicationManager.getApplication().executeOnPooledThread {
             // Entries are keyed by display name, so a rename would otherwise leave the old
             // agent behind in the picker, still pointing at the old command.
-            if (previousName != settings.displayName) AcpConfigFile.removeAgent(previousName)
+            if (previousName != settings.displayName) {
+                AcpConfigFile.removeAgents { it == previousName || isWslAgentName(it, previousName) }
+            }
             ClaudeAgentProvisioner().provision()
         }
     }

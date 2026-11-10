@@ -29,7 +29,7 @@ data class NodeRuntime(val binDir: Path, val node: Path, val npxCli: Path) {
     }
 
     /** What follows [node] on the command line to run [packageSpec]. */
-    fun npxArgs(packageSpec: String): List<String> = npxArgs(npxCli, globalPrefix(), packageSpec)
+    fun npxArgs(packageSpec: String): List<String> = npxArgs(npxCli.toString(), globalPrefix()?.toString(), packageSpec)
 
     /**
      * npm's global prefix for this runtime, or null when npm does not name a usable one.
@@ -71,13 +71,15 @@ data class NodeRuntime(val binDir: Path, val node: Path, val npxCli: Path) {
  * redirect its `npm install -g` and hide the global `npmrc`.
  *
  * Without a [prefix] the flag is left out: the agent then starts everywhere it did before.
+ *
+ * Strings, not paths, because a WSL entry's paths belong to the distribution, not the host.
  */
-internal fun npxArgs(npxCli: Path, prefix: Path?, packageSpec: String): List<String> =
+internal fun npxArgs(npxCli: String, prefix: String?, packageSpec: String): List<String> =
     buildList {
-        add(npxCli.toString())
+        add(npxCli)
         if (prefix != null) {
             add("--prefix")
-            add(prefix.toString())
+            add(prefix)
         }
         add("-y")
         add(packageSpec)

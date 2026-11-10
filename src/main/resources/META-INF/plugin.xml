@@ -28,6 +28,8 @@
           <li>Sign in with the standard Claude.ai Pro/Max login. No API key.</li>
           <li>Node.js is found automatically: the IDE's own runtime, nvm, fnm, Volta, asdf, mise,
           vfox, nodenv or Homebrew, and the official installer or nvm-windows on Windows.</li>
+          <li>WSL projects get an agent entry of their own that runs with the Node.js inside the
+          distribution.</li>
           <li>A settings page, <i>Settings → Tools → Subscription ACP Agent</i>, with a model
           dropdown that lists the models your plan offers.</li>
           <li>Works in IntelliJ IDEA, PyCharm, WebStorm, PhpStorm, GoLand, RubyMine, RustRover and
