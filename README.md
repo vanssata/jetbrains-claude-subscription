@@ -94,7 +94,7 @@ watches for changes:
   "agent_servers": {
     "Claude Subscription": {
       "command": "<node>",
-      "args": ["<npx-cli.js>", "-y", "@agentclientprotocol/claude-agent-acp@0.85.1"],
+      "args": ["<npx-cli.js>", "-y", "@agentclientprotocol/claude-agent-acp@0.102.0"],
       "env": { "PATH": "<node bin>:<inherited PATH>" },
       "use_idea_mcp": true,
       "use_custom_mcp": true
@@ -148,7 +148,7 @@ Renaming the agent removes the entry under the old name. State is stored in
 | --- | --- | --- |
 | `manageAgent` | `true` | Turn off to stop the plugin touching `acp.json` and manage the entry yourself. |
 | `displayName` | `Claude Subscription` | Also determines the agent id the IDE derives, which chat history and per-agent session options follow. Renaming it starts the agent over. |
-| `packageSpec` | `@agentclientprotocol/claude-agent-acp@0.85.1` | Pinned deliberately — the guard being worked around lives in this package. |
+| `packageSpec` | `@agentclientprotocol/claude-agent-acp@0.102.0` | Pinned deliberately — the guard being worked around lives in this package. |
 | `model` | *(blank)* | Starting model for the IDE session, written to the agent's `env` as `ANTHROPIC_MODEL` (e.g. `opus`). Blank means the `model` from `~/.claude/settings.json`. |
 
 `model` exists because `~/.claude/settings.json` is shared with the CLI. Use it when the IDE
