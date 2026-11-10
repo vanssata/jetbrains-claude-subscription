@@ -2,9 +2,11 @@ package dev.vanssa.claudeacp
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import java.util.concurrent.ConcurrentHashMap
@@ -25,7 +27,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ClaudeAgentProvisioner : ProjectActivity {
 
     override suspend fun execute(project: Project) {
-        if (provisionedThisSession.compareAndSet(false, true)) provisionHost()
+        if (provisionedThisSession.compareAndSet(false, true)) {
+            warnWithoutHost()
+            provisionHost()
+        }
 
         // Each WSL distribution gets its entry the first time one of its projects opens,
         // not for every installed distribution: an entry for a distribution the user never
@@ -41,6 +46,24 @@ class ClaudeAgentProvisioner : ProjectActivity {
     fun provision() {
         provisionHost()
         wslDistributions.forEach(::provisionWsl)
+    }
+
+    /**
+     * Neither host is a required dependency (issue #24), so the plugin also loads where no
+     * chat can show the agent. Said once rather than left silent; the entry is still written,
+     * so installing a host later needs no restart of this plugin's work.
+     */
+    private fun warnWithoutHost() {
+        // `isLoaded`, not `getPlugin(...).isEnabled`: the verifier flags `getPlugin` as internal
+        // API and `isEnabled` as deprecated. A plugin is loaded only when it is enabled.
+        if (HOST_PLUGINS.any { PluginManagerCore.isLoaded(PluginId.getId(it)) }) return
+        LOG.warn("Neither AI Assistant nor Air is enabled; no chat will list the agent")
+        notify(
+            NotificationType.WARNING,
+            "No AI chat to show the agent in",
+            "The Claude Subscription agent appears in the chat of the JetBrains AI Assistant or Air plugin. " +
+                "Install or enable one of them.",
+        )
     }
 
     private fun provisionHost() {
@@ -163,6 +186,9 @@ class ClaudeAgentProvisioner : ProjectActivity {
 
         /** `ProjectActivity` runs per opened project; the config is application-wide. */
         val provisionedThisSession = AtomicBoolean(false)
+
+        /** AI Assistant and Air: both read `~/.jetbrains/acp.json` for local agents. */
+        val HOST_PLUGINS = listOf("com.intellij.ml.llm", "com.intellij.air")
 
         /** Distributions whose entry this session wrote, rewritten on settings apply. */
         val wslDistributions: MutableSet<String> = ConcurrentHashMap.newKeySet()

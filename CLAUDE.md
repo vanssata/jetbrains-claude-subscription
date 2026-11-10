@@ -76,8 +76,11 @@ that stops reporting models leaves it empty.
 - **Use no AI Assistant classes.** Everything under `com.intellij.ml.llm` is internal API
   (JetBrains Marketplace guideline 2.1). The agent icon was dropped for this reason: its only
   seam, `agentIconService`, also put the plugin in every other agent's icon path (guideline
-  2.2). `<depends>com.intellij.ml.llm</depends>` stays because the plugin is useless without
-  AI Assistant, not because it links against it.
+  2.2). AI Assistant (`com.intellij.ml.llm`) and Air (`com.intellij.air`) are both
+  *optional* dependencies with empty config files: either one reads `~/.jetbrains/acp.json`
+  (Air carries its own copy of the same ACP runtime), and a required AI Assistant kept
+  Air-only users out (issue #24). The plugin links against neither; with neither enabled the
+  provisioner only says so.
 - **The plugin name carries no third-party trademark** (guideline 1.2, Anthropic trademark
   guidelines), and the plugin ships no Claude logo. The agent's default display name
   "Claude Subscription" stays as it is, for two reasons. The agent id, and with it existing
