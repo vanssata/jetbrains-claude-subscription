@@ -9,13 +9,18 @@
 -->
 <plugins>
     <plugin id="dev.vanssa.claudeacp"
-            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.0/jetbrains-claude-subscription-0.5.0.zip"
-            version="0.5.0">
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.1/jetbrains-claude-subscription-0.5.1.zip"
+            version="0.5.1">
         <idea-version since-build="262" until-build="263.*"/>
         <name>Subscription ACP Agent</name>
         <vendor>vanssa</vendor>
         <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
         <change-notes><![CDATA[
+            <b>0.5.1</b><br/>
+            WSL projects: the agent now starts inside the distribution. The first time a project
+            from a WSL distribution opens, a <i>Claude Subscription (WSL: &lt;distribution&gt;)</i>
+            agent is added that runs with the Node.js found there; pick it in those projects.
+            AI Assistant is no longer required: the agent also appears in the Air plugin's chat.<br/><br/>
             <b>0.5.0</b><br/>
             The agent now starts in projects whose <code>package.json</code> pins pnpm, yarn or
             bun through <code>devEngines</code> (npx stopped with <code>EBADDEVENGINES</code>).
