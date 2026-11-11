@@ -122,7 +122,8 @@ class ClaudeAgentProvisioner : ProjectActivity {
         write(name, entry, "${runtime.node} in WSL $distribution") {
             "Added \"$name\" to the AI chat agent list. Pick it in projects inside $distribution — " +
                 "\"${settings.displayName}\" runs on Windows and cannot start there. " +
-                "The agent signs in separately inside the distribution."
+                "The agent signs in separately inside the distribution: run \"claude /login\" in a " +
+                "terminal there, since the chat's login button does not reach it yet."
         }
     }
 
