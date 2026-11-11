@@ -162,6 +162,13 @@ chat of projects inside the distribution; the plain entry stays for Windows proj
   notification naming the distribution, and no WSL entry is written.
 - The agent signs in separately there: it reads the credentials of Claude Code inside the
   distribution (`~/.claude` there), not the Windows ones.
+- Sign in from a terminal inside the distribution, not from the chat. The chat's login
+  button opens an empty terminal for a WSL agent (see Known limits). Run this once there and
+  choose the Claude subscription login:
+
+  ```bash
+  claude /login        # or: npx @anthropic-ai/claude-code /login
+  ```
 - On NixOS, the IDE-downloaded runtime only runs with `nix-ld`; a node from your profile
   (`home.packages`, `environment.systemPackages`) works without it.
 
@@ -208,6 +215,12 @@ agent appears.
   nvm-windows) and looks for IDE runtimes under `%LOCALAPPDATA%\JetBrains`, but it is
   developed and verified on Linux. The WSL entries were verified against the IDE's launch
   code and a Linux shell, not yet on a Windows machine.
+- **The chat's login button does not work for WSL agents.** AI Assistant starts the agent
+  with the entry's `command` as a path inside the distribution and with the entry's `env`.
+  For the login terminal it converts the same `command` as a Windows path, where
+  `/usr/bin/node` is not absolute, and drops the `env`; the login window stays empty
+  (issue #22). No single `command` satisfies both, so this needs a fix in the IDE; sign in
+  from a terminal in the distribution instead (see [WSL projects](#wsl-projects)).
 - **Two agents in the picker with WSL.** `acp.json` has one `command` per entry and no
   way to tell the IDE which entry belongs to which machine, so both are listed everywhere.
 - **Unsupported by JetBrains.** They disabled this deliberately in their bundled entry.
