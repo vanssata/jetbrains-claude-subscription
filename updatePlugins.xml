@@ -9,13 +9,17 @@
 -->
 <plugins>
     <plugin id="dev.vanssa.claudeacp"
-            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.1/jetbrains-claude-subscription-0.5.1.zip"
-            version="0.5.1">
+            url="https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.2/jetbrains-claude-subscription-0.5.2.zip"
+            version="0.5.2">
         <idea-version since-build="262" until-build="263.*"/>
         <name>Subscription ACP Agent</name>
         <vendor>vanssa</vendor>
         <description>Adds a Claude Subscription agent to JetBrains AI chat that authenticates with a Claude.ai Pro/Max subscription.</description>
         <change-notes><![CDATA[
+            <b>0.5.2</b><br/>
+            Signing in from the chat works again: it failed with <code>node: bad option: --cli</code>.
+            The agent now starts through a small script in <code>~/.jetbrains/claude-subscription/</code>,
+            also inside WSL distributions. Restart the IDE once and start a new chat.<br/><br/>
             <b>0.5.1</b><br/>
             WSL projects: the agent now starts inside the distribution. The first time a project
             from a WSL distribution opens, a <i>Claude Subscription (WSL: &lt;distribution&gt;)</i>
