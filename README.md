@@ -66,7 +66,7 @@ Updates then arrive like for any other plugin.
 
 **B. From the release zip.** Download
 
-**[⬇ jetbrains-claude-subscription-0.5.1.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.1/jetbrains-claude-subscription-0.5.1.zip)**
+**[⬇ jetbrains-claude-subscription-0.5.2.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.2/jetbrains-claude-subscription-0.5.2.zip)**
 — or the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
 
 In the IDE open `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
