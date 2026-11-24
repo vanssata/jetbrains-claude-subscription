@@ -86,8 +86,9 @@ class ClaudeAgentProvisioner : ProjectActivity {
             return
         }
 
-        val entry =
-            buildEntry(runtime.node.toString(), runtime.npxArgs(settings.packageSpec), runtime.pathWithBinDir(), settings.model)
+        val npxArgs = runtime.npxArgs(settings.packageSpec)
+        val launcher = AgentLauncher.writeHost(runtime, npxArgs)?.toString()
+        val entry = buildEntry(launcher, runtime.node.toString(), npxArgs, runtime.pathWithBinDir(), settings.model)
         write(settings.displayName, entry, runtime.node.toString()) {
             "Added \"${settings.displayName}\" to the AI chat agent list. " +
                 "Pick it there and authenticate with your Claude subscription."
@@ -118,12 +119,13 @@ class ClaudeAgentProvisioner : ProjectActivity {
             return
         }
 
-        val entry = buildEntry(runtime.node, runtime.npxArgs(settings.packageSpec), runtime.path(), settings.model)
+        val npxArgs = runtime.npxArgs(settings.packageSpec)
+        val launcher = AgentLauncher.writeWsl(distribution, runtime, npxArgs)
+        val entry = buildEntry(launcher, runtime.node, npxArgs, runtime.path(), settings.model)
         write(name, entry, "${runtime.node} in WSL $distribution") {
             "Added \"$name\" to the AI chat agent list. Pick it in projects inside $distribution — " +
                 "\"${settings.displayName}\" runs on Windows and cannot start there. " +
-                "The agent signs in separately inside the distribution: run \"claude /login\" in a " +
-                "terminal there, since the chat's login button does not reach it yet."
+                "The agent signs in separately inside the distribution, with its own Claude login."
         }
     }
 
@@ -152,9 +154,14 @@ class ClaudeAgentProvisioner : ProjectActivity {
     /**
      * Note what is *absent*: `--hide-claude-auth`. Everything else mirrors how the IDE
      * launches the bundled agent.
+     *
+     * The [launcher] takes the place of `node` and its arguments, so that the login button
+     * works ([AgentLauncher] says why). Without one the entry still starts the agent the old
+     * way, and only the login button fails.
      */
-    private fun buildEntry(command: String, npxArgs: List<String>, path: String, model: String?): JsonObject {
-        val args = JsonArray().apply { npxArgs.forEach(::add) }
+    private fun buildEntry(launcher: String?, node: String, npxArgs: List<String>, path: String, model: String?): JsonObject {
+        val command = launcher ?: node
+        val args = JsonArray().apply { if (launcher == null) npxArgs.forEach(::add) }
 
         // `npx-cli.js` spawns helpers via `#!/usr/bin/env node`, so the runtime's bin
         // directory has to be on PATH — an absolute `command` alone is not enough.

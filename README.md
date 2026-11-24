@@ -43,51 +43,131 @@ Nothing is patched or bypassed: the package supports subscriptions by default, w
 how other ACP clients use it. The restriction is JetBrains-side, applied to their own
 bundled entry.
 
-## Requirements
+## Installation
 
-- A JetBrains IDE on the **262.\*** or **263.\*** branch (2026.2 or 2026.3) with the AI
-  Assistant plugin or the Air plugin. Both read the agent from the same `acp.json`; Air
-  works without AI Assistant installed.
-- A Claude.ai Pro or Max subscription.
-- Node.js — but see below, one is usually already present.
+### Before you start
 
-## Install
+| You need | Notes |
+| --- | --- |
+| A JetBrains IDE **2026.2 or 2026.3** (build 262.\* or 263.\*) | IntelliJ IDEA, PhpStorm, WebStorm, PyCharm and the other IDEs on those branches. |
+| The **AI Assistant** plugin or the **Air** plugin, enabled | Either one is enough. Both read the agent from the same `~/.jetbrains/acp.json`. |
+| A **Claude.ai Pro or Max** subscription | This agent exists to sign in with it. |
+| **Node.js 22 or later** | Usually nothing to do: if you have none, the plugin uses the runtime the IDE downloads for its own agents. See [Node.js](#nodejs) below. |
 
-**[⬇ Download jetbrains-claude-subscription-0.5.1.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.1/jetbrains-claude-subscription-0.5.1.zip)**
-— or pick the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
+### Step 1 — Install the plugin
 
-Then in the IDE: `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
-(do not unzip it), and restart.
+Pick one of the three ways.
 
-### Update notifications
+**A. From JetBrains Marketplace (recommended).** In the IDE open
+`Settings → Plugins → Marketplace`, search for **Subscription ACP Agent**, click
+**Install** and restart the IDE. Or open the
+[Marketplace page](https://plugins.jetbrains.com/plugin/33150) and use **Install to IDE**.
+Updates then arrive like for any other plugin.
 
-A plugin installed from disk is never checked for updates. To be notified in the IDE,
+**B. From the release zip.** Download
+
+**[⬇ jetbrains-claude-subscription-0.5.1.zip](https://github.com/vanssata/jetbrains-claude-subscription/releases/download/v0.5.1/jetbrains-claude-subscription-0.5.1.zip)**
+— or the newest zip from the [releases page](https://github.com/vanssata/jetbrains-claude-subscription/releases).
+
+In the IDE open `Settings → Plugins → ⚙ → Install Plugin from Disk…`, choose the zip
+(**do not unzip it**) and restart the IDE.
+
+A plugin installed from disk is never checked for updates. To be told about new releases,
 add this repository once under `Settings → Plugins → ⚙ → Manage Plugin Repositories…`:
 
 ```text
 https://raw.githubusercontent.com/vanssata/jetbrains-claude-subscription/master/updatePlugins.xml
 ```
 
-The IDE then offers each new release like a Marketplace update.
-
-### Building from source instead
+**C. Build it yourself.**
 
 ```bash
-JAVA_HOME=/path/to/a/jdk ./gradlew buildPlugin
-# build/distributions/jetbrains-claude-subscription-0.5.1.zip
+JAVA_HOME=/path/to/a/jdk-21 ./gradlew buildPlugin \
+  -PplatformLocalPath=/path/to/your/ide \
+  -PaiAssistantPluginPath=/path/to/your/ide-config/ml-llm
+# -> build/distributions/jetbrains-claude-subscription-<version>.zip
 ```
 
-`gradle.properties` sets `platformLocalPath` and `aiAssistantPluginPath` to a locally
-installed IDE so the build does not download a full platform. Point them at your own
-installation.
-
-Without an IDE at hand, take the zip from the artifacts of a
+`gradle.properties` points `platformLocalPath` and `aiAssistantPluginPath` at a locally
+installed IDE so the build does not download a whole platform; pass your own paths as
+above. Without an IDE at hand, take the zip from the artifacts of a
 [Build workflow](https://github.com/vanssata/jetbrains-claude-subscription/actions/workflows/build.yml)
-run: it builds every pushed branch against a downloaded IDE.
+run, which builds every pushed branch against a downloaded IDE. Install it as in **B**.
 
-On first startup the agent is registered and a notification confirms it. Select
-**Claude Subscription** in the AI chat agent picker and authenticate — the browser flow
-now offers `--claudeai` login instead of `--console`.
+### Step 2 — Check that the agent was registered
+
+After the restart a notification says **Claude Subscription agent ready**. The plugin has
+then written the agent to `~/.jetbrains/acp.json` (`%USERPROFILE%\.jetbrains\acp.json` on
+Windows) and a start script to `~/.jetbrains/claude-subscription/` — see
+[What it writes](#what-it-writes).
+
+If you see **No Node.js 22 or later found** instead, see [Node.js](#nodejs).
+
+### Step 3 — Pick the agent and sign in
+
+1. Open the chat:
+   - **AI Assistant:** the AI Chat tool window, then the agent picker above the input.
+   - **Air:** the Agent Sessions tool window, then the arrow next to **New Session**.
+2. Choose **Claude Subscription**.
+3. When the chat asks you to sign in, choose **Claude Subscription** (not *Anthropic
+   Console*). A terminal opens and then your browser; sign in with the claude.ai account
+   that has the Pro or Max plan.
+4. Start a **new chat** after signing in.
+
+Already signed in to Claude Code on this machine? The agent uses the same credentials
+(`~/.claude`), so it may skip the sign-in.
+
+**If the sign-in button does nothing or fails**, sign in once from any terminal and
+start a new chat. The agent reads the same credentials:
+
+```bash
+claude auth login --claudeai
+# without Claude Code installed:
+npx @anthropic-ai/claude-code auth login --claudeai
+```
+
+### Step 4 — Check that it works
+
+Send a short message. The answer comes from your subscription; there is no API billing.
+To pick the starting model, see [Settings](#settings).
+
+### Node.js
+
+The plugin looks for node 22 or later in this order and uses the first it finds:
+
+1. your `PATH` (the shell's, also for an IDE started from the macOS Dock);
+2. the default install locations of vfox, mise, asdf, nvm, fnm, Volta, nodenv and, on
+   macOS, Homebrew;
+3. the runtime the IDE downloads for its own agents — start any bundled agent once (e.g.
+   the IDE's own Claude Agent or Codex) and it is there.
+
+A node older than 22 is skipped. If none is found, install Node.js 22+ from
+[nodejs.org](https://nodejs.org) or your version manager and restart the IDE.
+
+### Projects inside WSL
+
+Projects inside a WSL distribution get their own agent, e.g.
+**Claude Subscription (WSL: Ubuntu)**, added the first time such a project opens. It needs
+Node.js 22+ *inside* the distribution and its own sign-in there. Details in
+[WSL projects](#wsl-projects).
+
+### Upgrading from 0.5.1 or earlier
+
+Restart the IDE once after the update: the plugin rewrites the agent entry by itself. Then
+start a **new chat** and sign in again if asked. This is what fixes
+`node: bad option: --cli` on sign-in (issue #34).
+
+### Uninstalling
+
+Uninstall the plugin under `Settings → Plugins`. The IDE does not let a plugin clean up
+after itself, so the entries stay behind. Remove them by hand:
+
+- the `"Claude Subscription"` entries (WSL ones included) under `agent_servers` in
+  `~/.jetbrains/acp.json` — leave the rest of the file alone, it holds other agents;
+- the folder `~/.jetbrains/claude-subscription/` (inside each WSL distribution as well).
+
+The file as it was before the plugin first ran is kept as
+`~/.jetbrains/acp.json.before-claude-subscription-plugin`.
 
 ## What it writes
 
@@ -98,14 +178,23 @@ watches for changes:
 {
   "agent_servers": {
     "Claude Subscription": {
-      "command": "<node>",
-      "args": ["<npx-cli.js>", "--prefix", "<npm global prefix>", "-y", "@agentclientprotocol/claude-agent-acp@0.100.0"],
+      "command": "~/.jetbrains/claude-subscription/agent",
+      "args": [],
       "env": { "PATH": "<node bin>:<inherited PATH>" },
       "use_idea_mcp": true,
       "use_custom_mcp": true
     }
   }
 }
+```
+
+and the script it names, `~/.jetbrains/claude-subscription/agent` (`agent.cmd` on Windows):
+
+```sh
+#!/bin/sh
+PATH='<node bin>':"$PATH"
+export PATH
+exec '<node>' '<npx-cli.js>' '--prefix' '<npm global prefix>' '-y' '@agentclientprotocol/claude-agent-acp@0.100.0' "$@"
 ```
 
 The file is **merged**, never overwritten — other agents and `default_mcp_settings`
@@ -116,7 +205,13 @@ was in it.
 
 ### Why the command looks like that
 
-Three findings drove the shape:
+Four findings drove the shape:
+
+- **The command is a script, not `node`.** The chat's login button runs the entry's
+  `command` with the login method's arguments (`--cli auth login --claudeai`) and without
+  the entry's `args`. With `node` as the command that is `node --cli …`, which fails with
+  `bad option: --cli` (issue #34). The script starts the agent and passes those arguments
+  on, so the same call reaches the Claude CLI's login.
 
 - **`npx` is not enough on its own.** `npx-cli.js` re-execs its helpers through
   `#!/usr/bin/env node`, so the node binary must be on `PATH`. Calling it by absolute
@@ -162,9 +257,11 @@ chat of projects inside the distribution; the plain entry stays for Windows proj
   notification naming the distribution, and no WSL entry is written.
 - The agent signs in separately there: it reads the credentials of Claude Code inside the
   distribution (`~/.claude` there), not the Windows ones.
-- Sign in from a terminal inside the distribution, not from the chat. The chat's login
-  button opens an empty terminal for a WSL agent (see Known limits). Run this once there and
-  choose the Claude subscription login:
+- The entry's `command` is a launcher script written inside the distribution, at
+  `~/.jetbrains/claude-subscription/agent` there, for the reason given under
+  [Why the command looks like that](#why-the-command-looks-like-that).
+- If the chat's login button still fails there, sign in once from a terminal inside the
+  distribution and choose the Claude subscription login:
 
   ```bash
   claude /login        # or: npx @anthropic-ai/claude-code /login
@@ -215,12 +312,14 @@ agent appears.
   nvm-windows) and looks for IDE runtimes under `%LOCALAPPDATA%\JetBrains`, but it is
   developed and verified on Linux. The WSL entries were verified against the IDE's launch
   code and a Linux shell, not yet on a Windows machine.
-- **The chat's login button does not work for WSL agents.** AI Assistant starts the agent
-  with the entry's `command` as a path inside the distribution and with the entry's `env`.
-  For the login terminal it converts the same `command` as a Windows path, where
-  `/usr/bin/node` is not absolute, and drops the `env`; the login window stays empty
-  (issue #22). No single `command` satisfies both, so this needs a fix in the IDE; sign in
-  from a terminal in the distribution instead (see [WSL projects](#wsl-projects)).
+- **The login button for WSL agents is not verified on Windows yet.** Older IDE builds
+  converted the entry's `command` as a Windows path for the login terminal and left the
+  window empty (issue #22). Newer ones run it inside the distribution, where the launcher
+  script handles it; if yours does not, sign in from a terminal in the distribution (see
+  [WSL projects](#wsl-projects)).
+- **Sessions are listed twice in Air's Agent Sessions.** Air lists Claude Code sessions
+  from `~/.claude` itself and asks this agent for the same ones, and does not merge the
+  two. The package offers no way to turn its listing off; this needs a fix in Air.
 - **Two agents in the picker with WSL.** `acp.json` has one `command` per entry and no
   way to tell the IDE which entry belongs to which machine, so both are listed everywhere.
 - **Unsupported by JetBrains.** They disabled this deliberately in their bundled entry.

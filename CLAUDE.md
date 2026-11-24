@@ -100,6 +100,13 @@ that stops reporting models leaves it empty.
   `npm_config_prefix`, which every `npm` the agent runs reads as the global prefix. An
   empty directory would fix `EBADDEVENGINES` just as well and quietly redirect the agent's
   `npm install -g`.
+- **The entry's `command` is a launcher script, never `node`** (issue #34). The chat's
+  login button runs `command` plus the auth method's `args` (`--cli auth login …`), not
+  the entry's `args` and not the package's `_meta["terminal-auth"]`; with `node` that is
+  `node --cli` and fails. `AgentLauncher` writes `~/.jetbrains/claude-subscription/agent`
+  (`agent.cmd` on Windows, inside the distribution for WSL) and the entry has empty
+  `args`. The `.cmd` must start with `@echo off`: stdout is the JSON-RPC channel.
+  `test/handshake.sh` checks that `launcher --cli` still reaches the Claude CLI.
 - **The node `PATH` entry is load-bearing.** `npx-cli.js` re-execs helpers through
   `#!/usr/bin/env node`, so an absolute node path alone fails. The path is also re-resolved on
   every startup because the IDE's fallback runtime path carries a version number.

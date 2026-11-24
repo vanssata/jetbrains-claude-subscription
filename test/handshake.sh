@@ -51,15 +51,26 @@ printf '%s\n' '{"devEngines": {"packageManager": {"name": "pnpm", "onFail": "err
     > "${PROJECT}/package.json"
 echo "prefix:  ${PREFIX}"
 
-RESPONSE=$(cd "${PROJECT}" && printf '%s\n' "${REQUEST}" | env PATH="${NODE_BIN}:${PATH}" \
-    "${NODE_BIN}/node" "${NPX_CLI}" --prefix "${PREFIX}" -y "${PACKAGE}" 2>/dev/null | head -1)
+# 4. Through a launcher shaped like AgentLauncher.posixLauncher, because the entry's
+#    `command` is that script, with no `args`: the login button runs it with the auth
+#    method's own `args` appended (issue #34).
+LAUNCHER="${PROJECT}/agent"
+cat > "${LAUNCHER}" <<LAUNCHER_END
+#!/bin/sh
+PATH='${NODE_BIN}':"\$PATH"
+export PATH
+exec '${NODE_BIN}/node' '${NPX_CLI}' '--prefix' '${PREFIX}' '-y' '${PACKAGE}' "\$@"
+LAUNCHER_END
+chmod 755 "${LAUNCHER}"
+
+RESPONSE=$(cd "${PROJECT}" && printf '%s\n' "${REQUEST}" | "${LAUNCHER}" 2>/dev/null | head -1)
 
 if [ -z "${RESPONSE}" ]; then
     echo "FAIL: agent produced no response" >&2
     exit 1
 fi
 
-# 4. Assert on the auth methods actually offered.
+# 5. Assert on the auth methods actually offered.
 printf '%s' "${RESPONSE}" | python3 -c '
 import json, sys
 
@@ -72,4 +83,20 @@ print("methods: %s" % ", ".join(methods))
 if "claude-ai-login" not in methods:
     sys.exit("FAIL: claude-ai-login missing — the subscription auth method is not offered")
 print("PASS: claude-ai-login offered")
+
+# What the login button appends to the command.
+login = next(m for m in result["authMethods"] if m["id"] == "claude-ai-login")
+if login.get("args", [])[:1] != ["--cli"]:
+    sys.exit("FAIL: claude-ai-login args no longer start with --cli: %s" % login.get("args"))
 '
+
+# 6. The login button's command: the launcher with `--cli …`, which the package hands to
+#    the Claude CLI. `--version` stands in for `auth login`, which would open a browser.
+CLI=$(cd "${PROJECT}" && "${LAUNCHER}" --cli --version </dev/null 2>&1 | tail -1)
+case ${CLI} in
+    *"Claude Code"*) echo "PASS: launcher --cli reaches the Claude CLI (${CLI})" ;;
+    *)
+        echo "FAIL: launcher --cli --version printed: ${CLI}" >&2
+        exit 1
+        ;;
+esac
