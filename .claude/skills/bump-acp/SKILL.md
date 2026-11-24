@@ -25,7 +25,7 @@ Replace the old `@agentclientprotocol/claude-agent-acp@<old>` with the new versi
 
 1. `src/main/kotlin/dev/vanssa/claudeacp/ClaudeAcpSettings.kt` — `DEFAULT_PACKAGE_SPEC`
 2. `test/handshake.sh` — the `PACKAGE=` default (`test/models.sh` reads it from there)
-3. `README.md` — the `acp.json` example under "What it writes"
+3. `README.md` — the launcher script example under "What it writes"
 4. `README.md` — the `packageSpec` row of the settings table
 
 Then confirm nothing was missed:
